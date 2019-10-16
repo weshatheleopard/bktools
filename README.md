@@ -2,7 +2,7 @@
 All kinds of tools for BK-0010 (my personal project open for public to see)
 
 
-== BK-0010 tape format ==
+== BK-0010 tape format
 
 Unlike some other renditions, this has been derived from the actual BK-0010 firmware.
 
@@ -33,14 +33,14 @@ Logical "1":
 ```
 
 Data bit sequence:
-
+```
 {
   * Data bit ("0" / "1")
   * Sync bit ("0")
 }
-
+```
 Byte sequence:
-
+```
 {
   * Bit #0 (LSB)
   * Bit #1
@@ -51,10 +51,9 @@ Byte sequence:
   * Bit #6
   * Bit #7 (MSB)
 }
-
-
-Marker squence (first_impulse_length || 0, impulse_count):
-
+```
+Marker sequence (first_impulse_length || 0, impulse_count):
+```
 {
   * "possibly long 0" (first_impulse_length + 23d / first_impulse_length + 22d)
   * (impulse_count - 1) * "0" (23d / 22d)
@@ -62,9 +61,9 @@ Marker squence (first_impulse_length || 0, impulse_count):
   * synchro "1" (51d / 51d)
   * synchro "0" (24d / 22d)
 }
-
+```
 File sequence :
-
+```
 {
 * marker squence(0, 4096d)  - pilot marker
 * marker sequence(0, 8d)    - header marker
@@ -73,4 +72,8 @@ File sequence :
 * byte sequence             - array_data ("length" bytes) + checksum (2 bytes)
 * marker(256d, 256d)        - trailer pilot
 }
+```
 
+== Loading a file
+
+require 'mag_read' ; m = MagRead.new("name.wav", 50); m.read

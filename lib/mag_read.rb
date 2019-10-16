@@ -1,10 +1,8 @@
 require "wavefile"
 
-# Also: https://github.com/shokai/ruby-wav-file
-
 class MagRead
-  CUTOFF_COEFF = 1.7
-
+  CUTOFF_COEFF = 1.7  # Impulses longer than (base impulse length * CUTOFF_COEFF) will be
+                      # considered to encode "1"sl; shorter - "0"s.
   include WaveFile
 
   def initialize(filename, debuglevel = false)
@@ -276,33 +274,3 @@ class MagRead
   end
     
 end
-
-=begin
-From the monitor code:
-
-"0" = 11,00  (23d/22d)
-"1" = 01,10  (51d/51d)
-
-Data bit:
-* "0"/"1" (data)
-* "0" (sync)
-
-Marker(impulse_length || '0', impulse_count):  {
-  * "0_maybe_long" (R4+23d/R5+22d)
-  * (len-1) * "0" (23d/22d)
-  * "1_long" (105d/100d)
-  * "1" (51d/51d) + "0" (24d/22d)
-}
-
-File:
-* marker(0, 4096d)
-* marker(0, 8d)
-* adr+len+name (20d bytes)
-* marker(0, 8d)
-* array_data+checksum
-* marker(256d, 256d)
-
-=end
-
-
-# require './bkread.rb' ; m = MagRead.new("1.wav", 50); m.read
