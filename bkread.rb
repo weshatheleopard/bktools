@@ -7,64 +7,13 @@ class MagRead
 
   include WaveFile
 
-  def read_value # From wav file
-    bb = @f.read(2)
-    return nil if bb.nil?
-    v = bb.unpack("s>").first
-  end 
-
-  def read_word(bb)
-    w = bb.unpack("S<").first
-  end 
-
-  def read_dword(bbbb)
-    w = bbbb.unpack("L<").first
-  end 
-
   def initialize(filename, debuglevel = false)
 
-    reader = Reader.new(filename, Format.new(:mono, :float, 44100)).each_buffer do |buffer|
+    reader = Reader.new(filename, Format.new(:mono, :pcm_16, 44100)).each_buffer(1024*1024*1024) do |buffer|
+      @buffer = buffer
       puts "Read #{buffer.samples.length} sample frames."
     end
 
-
-
-
-    @f  = File.open(filename, "rb")
-# http://soundfile.sapp.org/doc/WaveFormat/
-    s = @f.read(4) # Contains the letters "RIFF" in ASCII form (0x52494646 big-endian form).
-    raise("Source file is not a RIFF file") if s != 'RIFF' 
-
-    filesize = @f.read(4) # 4 + (8 + SubChunk1Size) + (8 + SubChunk2Size)
-
-    s = @f.read(4) # Contains the letters "WAVE" (0x57415645 big-endian form).
-    raise("First chunk is not a WAVE chunk") if s != 'WAVE' 
-
-    # ----- Subchunk 1
-    s = @f.read(4) # Contains the letters "fmt " (0x666d7420 big-endian form).
-    raise("RIFF format messed up") if s != 'fmt ' 
-
-    samplesize = read_dword(@f.read(4)) # Subchunk1Size - 16 for PCM.  This is the size of the rest of the Subchunk which follows this number.
-    raise("Currenty only 16-bit wav is supported") if samplesize != 16
-
-    compression = read_word(@f.read(2)) # AudioFormat      PCM = 1 (i.e. Linear quantization)
-    raise("Currenty only PCM (1) is supported") if compression != 1
-
-    num_of_channels = read_word(@f.read(2))
-    raise("Currenty only mono files are supported") if num_of_channels != 1
-
-    @f.read(4) # SampleRate       8000, 44100, etc.
-    @f.read(4) # ByteRate         == SampleRate * NumChannels * BitsPerSample/8
-    @f.read(2) # BlockAlign       == NumChannels * BitsPerSample/8 - The number of bytes for one sample including all channels
-    @f.read(2) # BitsPerSample    8 bits = 8, 16 bits = 16, etc.
-    # ----- Subchunk 2
-    s = @f.read(4) # Contains the letters "data" (0x64617461 big-endian form).
-    raise("Second chunk is not a data chunk") if s != 'data' 
-
-    chunksize = read_dword(@f.read(4)) # Subchunk2Size    == NumSamples * NumChannels * BitsPerSample/8   -- This is the number of bytes in the data.
-    @datasize = chunksize
-
-    @f.read(1) # Somehow there's an extra byte
     @debuglevel = debuglevel
   end
 
@@ -78,7 +27,7 @@ class MagRead
 
     counter = 0
 
-    while (c = self.read_value()) do
+    @buffer.samples.each { |c|
       position_in_file += 1
       if c > 0 then
         counter += 1
@@ -88,8 +37,14 @@ class MagRead
           counter = 0
         end
       end
-    end
+    }
+
   end
+
+  def start_marker
+    @marker_counter = 0
+  end
+  private :start_marker
   
   def read
     convert_file_to_legths if @hash.nil?
@@ -126,7 +81,7 @@ class MagRead
         else
           total_pilot_length += len
           pilot_counter += 1
-#          puts "Pilot impulse ##{pilot_counter}, impulse length: #{len}, total sequence length = #{total_pilot_length}"
+          debug 40, "Pilot impulse ##{pilot_counter}, impulse length: #{len}, total sequence length = #{total_pilot_length}"
         end
       when :pilot_found then
         debug 15, "Synchro '1' after pilot: (#{(len > @cutoff) ? 'success' : 'fail' })"
@@ -134,7 +89,7 @@ class MagRead
       when :pilot_found2 then
         debug 15, "Synchro '0' after pilot: (#{(len < @cutoff) ? 'success' : 'fail' })"
         state = :header_marker
-        @marker_counter = 0
+        start_marker
       when :header_marker
         if read_marker(len) then
           @is_data_bit = true
@@ -145,7 +100,7 @@ class MagRead
         end
       when :read_header then
         if read_bit(len) then
-          @marker_counter = 0
+          start_marker
           @addr, @len, @name = @header_array.map{ |e| e.chr }.join.unpack("S<S<a16")
           debug 5, "   Header read: addr=#{octal(@addr)}, length=#{octal(@len)}, name=#{@name}" 
           state = :body_marker
@@ -172,10 +127,11 @@ class MagRead
         if read_bit(len) then
           @checksum = bytes2word(*@checksum_array)
           debug 5, "Checksum read = #{octal(@checksum)}, computed checksum = #{octal(compute_checksum)}"
-          @marker_counter = 0
+          start_marker
           state = :end_trailer
         end
       when :end_trailer then
+        # Trailing marker's lead length is equal to the length of at least 9 "0" impulses.
         if read_marker(len, 256, 9, :ignore_errors) then
           debug 5, "Read completed successfully"
           debug 0, "Checksum validation: #{(@checksum == compute_checksum) ? 'success!' : 'FAIL' }"
@@ -217,7 +173,7 @@ class MagRead
   end
 
   def read_marker(len, marker_len = 8, first_impulse = nil, ignore_errors = false)
-    debug 15, "Processing block start marker: impulse ##{@marker_counter}, imp_length #{len}; fist impulse must be #{first_impulse}, # of impulses #{marker_len}"
+    debug 15, "Processing block start marker: impulse ##{@marker_counter}, imp_length=#{len}; lead_impulse_length=#{first_impulse}, expecting #{marker_len} impulses"
 
     case @marker_counter
     when 0 then
@@ -320,8 +276,6 @@ class MagRead
   end
     
 end
-
-#m = MagRead.new("045-050 - Cdoc2.wav", 2); m.read
 
 =begin
 From the monitor code:
