@@ -2,7 +2,7 @@
 All kinds of tools for BK-0010 (my personal project open for public to see)
 
 
-== BK-0010 tape format
+## BK-0010 tape format
 
 Unlike some other renditions, this has been derived from the actual BK-0010 firmware.
 
@@ -74,6 +74,6 @@ File sequence :
 }
 ```
 
-== Loading a file
+## Reading data from a WAV file
 
 require 'mag_read' ; m = MagRead.new("name.wav", 50); m.read
