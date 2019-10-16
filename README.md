@@ -76,4 +76,6 @@ File sequence :
 
 ## Reading data from a WAV file
 
+```
 require 'mag_read' ; m = MagRead.new("name.wav", 50); m.read
+```
