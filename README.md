@@ -65,7 +65,7 @@ Marker sequence (first_impulse_length || 0, impulse_count):
 File sequence :
 ```
 {
-* marker sqquence(0, 4096d)  - pilot marker
+* marker sequence(0, 4096d)  - pilot marker
 * marker sequence(0, 8d)     - header marker
 * byte sequence              - header data address (2 bytes) + length (2 bytes) + file name (16d bytes)
 * marker sequence(0, 8d)     - data marker
