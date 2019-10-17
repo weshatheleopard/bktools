@@ -5,14 +5,17 @@ class MagRead
                       # considered to encode "1"sl; shorter - "0"s.
   include WaveFile
 
+  attr_accessor :bk_file
+
   def initialize(filename, debuglevel = false)
+    @debuglevel = debuglevel
 
     reader = Reader.new(filename, Format.new(:mono, :pcm_16, 44100)).each_buffer(1024*1024*1024) do |buffer|
       @buffer = buffer
-      puts "Read #{buffer.samples.length} sample frames."
+      debug 5, "Read #{buffer.samples.length} sample frames."
     end
 
-    @debuglevel = debuglevel
+    @bk_file = BkFile.new
   end
 
   def debug(msg_level, msg)
@@ -58,9 +61,7 @@ class MagRead
     @is_data_bit = true
     @marker_counter = nil
     @header_array = []
-    @body_array = []
     @checksum_array = []
-    @checksum = nil
 
     @hash.each_pair { |position, len|
       @current_sample_pos = position
@@ -99,15 +100,15 @@ class MagRead
       when :read_header then
         if read_bit(len) then
           start_marker
-          @addr, @len, @name = @header_array.map{ |e| e.chr }.join.unpack("S<S<a16")
-          debug 5, "   Header read: addr=#{octal(@addr)}, length=#{octal(@len)}, name=#{@name}" 
+          @bk_file.start_address, @bk_file.length, @bk_file.name = @header_array.map{ |e| e.chr }.join.unpack("S<S<a16")
+          debug 5, "   Header read: addr=#{Tools::octal(@bk_file.start_address)}, length=#{Tools::octal(@bk_file.length)}, name=#{@bk_file.name}" 
           state = :body_marker
         end
       when :body_marker
         if read_marker(len) then
           @is_data_bit = true
-          @current_array = @body_array
-          @reading_length = @byte_counter = @len
+          @current_array = @bk_file.body
+          @reading_length = @byte_counter = @bk_file.length
           debug 5, "Reading file body..."
           state = :read_data
         end
@@ -123,16 +124,16 @@ class MagRead
       when :cksum
         debug 20, "      -checksum- #{@is_data_bit ? 'data' : 'sync' } impulse length --> #{len}"
         if read_bit(len) then
-          @checksum = bytes2word(*@checksum_array)
-          debug 5, "Checksum read = #{octal(@checksum)}, computed checksum = #{octal(compute_checksum)}"
+          @bk_file.checksum = Tools::bytes2word(*@checksum_array)
+          debug 5, "Checksum read = #{Tools::octal(@bk_file.checksum)}, computed checksum = #{Tools::octal(@bk_file.compute_checksum)}"
           start_marker
           state = :end_trailer
         end
       when :end_trailer then
         # Trailing marker's lead length is equal to the length of at least 9 "0" impulses.
         if read_marker(len, 256, 9, :ignore_errors) then
-          debug 5, "Read completed successfully"
-          debug 0, "Checksum validation: #{(@checksum == compute_checksum) ? 'success!' : 'FAIL' }"
+          debug 5, "Read completed successfully."
+          debug 0, "Validating checksum: #{@bk_file.validate_checksum ? 'success!' : 'FAIL' }"
           break
         end
       end
@@ -155,7 +156,7 @@ class MagRead
         @byte_counter -= 1
 
         @bit_counter = 0
-        debug 10, "--- byte #{octal(@reading_length - @byte_counter)} of #{octal(@reading_length)} read: #{@byte.to_s(8)}" #(#{@byte.chr})"
+        debug 10, "--- byte #{Tools::octal(@reading_length - @byte_counter)} of #{Tools::octal(@reading_length)} read: #{@byte.to_s(8)}" #(#{@byte.chr})"
         @byte = 0
       end
     else # sync bit
@@ -188,89 +189,4 @@ class MagRead
     return false
   end
 
-  def compute_checksum
-    cksum = 0
-    @body_array.each { |byte|
-      cksum += byte
-      if cksum > 0o177777 then
-        cksum = cksum - 0o200000 + 1 # 16-bit cutoff + ADC
-      end
-    }
-    cksum
-  end
-
-=begin
-  def bytes2words
-    word_array = []
-
-    arr = @body_array.dup
-    sz = arr.size
-    sz += 1 if sz.odd?
-    sz = sz / 2
-
-    sz.times do
-      b0 = arr.shift
-      b1 = arr.shift || 0
-      bb = bytes2word(b0, b1)
-      word_array << octal(bb)
-    end
-    word_array
-  end
-=end
-
-  def bytes2word(b0, b1)
-    (b1 << 8) | b0
-  end
-       
-  def octal(bb)
-    ('000000' + bb.to_s(8))[-6..-1]
-  end
-
-#class MagRead
-  def print_file
-    puts @name
-    puts @len
-    
-    count = 0
-    b0 = b1 = nil
-    str = ''
-
-    @len.times do |i|
-      c = @body_array[i]
-
-      if b0.nil? then
-        b0 = c
-      else
-        b1 = c
-      end
-
-      c = '.' if c < 32 
-      str << c    
-
-      if (count % 8) == 0 then
-        print str, "\n", octal(@addr + count), ": "
-        str = ''
-      end
-
-
-      if b0 && b1 then
-        print octal(bytes2word(b0, b1)), " "
-        b0 = b1 = nil
-      end
-      
-      count += 1
-
-    end
-
-    puts    
-   
-    # Mind the odd start address... there are some quirks there. But, doesnt matter ATM   
-#    sz.times do |i|
- #     puts "#{}: #{}"
-  #    current_address += 2
-   # end
-    # Mind odd lengths    
-
-  end
-    
 end

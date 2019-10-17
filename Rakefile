@@ -28,6 +28,11 @@ task :console, [:script] do |_t, args|
   # clear ARGV so IRB is not confused
   ARGV.clear
 
+  dirs.each { |dir|
+    Dir.foreach(dir) { |f|
+      require(f) if f =~ /\.rb/
+    }
+  }
   require 'irb'
 
   # set the optional script to run
