@@ -65,12 +65,12 @@ Marker sequence (first_impulse_length || 0, impulse_count):
 File sequence :
 ```
 {
-* marker squence(0, 4096d)  - pilot marker
-* marker sequence(0, 8d)    - header marker
-* byte sequence             - header data address (2 bytes) + length (2 bytes) + file name (16d bytes)
-* marker sequence(0, 8d)    - data marker
-* byte sequence             - array_data ("length" bytes) + checksum (2 bytes)
-* marker(256d, 256d)        - trailer pilot
+* marker sqquence(0, 4096d)  - pilot marker
+* marker sequence(0, 8d)     - header marker
+* byte sequence              - header data address (2 bytes) + length (2 bytes) + file name (16d bytes)
+* marker sequence(0, 8d)     - data marker
+* byte sequence              - array_data ("length" bytes) + checksum (2 bytes)
+* marker(256d, 256d)         - trailer pilot
 }
 ```
 

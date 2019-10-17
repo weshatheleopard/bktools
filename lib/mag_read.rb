@@ -63,7 +63,7 @@ class MagRead
     @checksum = nil
 
     @hash.each_pair { |position, len|
-      @current_position = position
+      @current_sample_pos = position
 
       case state
       when :find_pilot then
@@ -143,7 +143,7 @@ class MagRead
   def read_bit(len)
     bit = (len > @cutoff) ? 1 : 0
 
-    raise "Bit WAY too long (#{len}) @ #{@current_position}, byte ##{@current_array.size}}" if len > (@impulse_length * 2.8)    
+    raise "Bit WAY too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}}" if len > (@impulse_length * 2.8)    
 
     if @is_data_bit then
       debug 15, "   bit ##{@bit_counter} read: #{bit}"
@@ -160,7 +160,7 @@ class MagRead
       end
     else # sync bit
       if bit == 1
-        raise "Sync bit too long (#{len}) @ #{@current_position}, byte ##{@len - @byte_counter}" 
+        raise "Sync bit too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}"
       end
       return true if @byte_counter == 0
     end
