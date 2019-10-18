@@ -17,34 +17,35 @@ class BkFile
     char_str = ''
   end
 
+  def ch(byte)
+    (byte < 32) ? '.' : byte.chr
+  end
+
   def display(options = {})
     puts "File name:     [#{(name + ' ' * 16)[0...16]}]"
     puts "Start address: #{Tools::octal(self.start_address)}"
     puts "Data length:   #{Tools::octal(self.length)}"
 
     b0 = b1 = nil
-    out_str = ''
     data_str = ''
     char_str = ''
-    addr = start_address
-    newline = true
     i = 0
 
-    if addr.odd? then
-      addr -=1
+    string_counter = 0
+    string_start_addr = start_address
+
+    if start_address.odd? then
+      string_start_addr = start_address - 1
+      string_counter = 2
       data_str = data_str + "   #{Tools::octal_byte(body[0])} "
-      char_str += ' '
+      char_str += ' ' + ch(body[0])
       i = 1
     end
 
-    data_str_start = addr
-
     while (i < length) do
-
       byte = body[i]
 
-      c = (byte < 32) ? '.' : byte.chr
-      char_str << c
+      char_str << ch(byte)
 
       if b0.nil? then
         b0 = byte
@@ -58,12 +59,14 @@ class BkFile
       end
 
       i +=1
+      string_counter += 1
 
-      if (i % 8) == 0 then
-        print_line(data_str_start, data_str, char_str)
+      if (string_counter % 8) == 0 then
+        print_line(string_start_addr, data_str, char_str)
         data_str = ''
         char_str = ''
-        data_str_start = i
+        string_start_addr += 8
+        string_counter = 0
       end
 
     end
@@ -73,7 +76,7 @@ class BkFile
     end
 
     if !data_str.empty? then
-      print_line(data_str_start, data_str, char_str)
+      print_line(string_start_addr, data_str, char_str)
     end
 
   end
