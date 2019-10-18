@@ -1,12 +1,16 @@
 GEM
   remote: http://rubygems.org/
   specs:
+    term-ansicolor (1.7.1)
+      tins (~> 1.0)
+    tins (1.21.1)
     wavefile (1.1.0)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
+  term-ansicolor
   wavefile (~> 1)
 
 BUNDLED WITH

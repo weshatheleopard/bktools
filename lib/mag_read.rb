@@ -1,4 +1,6 @@
-require "wavefile"
+require 'wavefile'
+require 'term/ansicolor'
+include Term::ANSIColor
 
 class MagRead
   CUTOFF_COEFF = 1.7  # Impulses longer than (base impulse length * CUTOFF_COEFF) will be
@@ -12,7 +14,7 @@ class MagRead
 
     reader = Reader.new(filename, Format.new(:mono, :pcm_16, 44100)).each_buffer(1024*1024*1024) do |buffer|
       @buffer = buffer
-      debug 5, "Read #{buffer.samples.length} sample frames."
+      debug 5, "Loaded #{buffer.samples.length.to_s.bold} samples"
     end
 
     @bk_file = BkFile.new
@@ -24,7 +26,7 @@ class MagRead
 
   def convert_file_to_legths
     position_in_file = 0
-    @hash = {}
+    @wavelengths_hash = {}
 
     counter = 0
 
@@ -34,7 +36,7 @@ class MagRead
         counter += 1
       else
         if counter != 0 then
-          @hash[position_in_file] = counter
+          @wavelengths_hash[position_in_file] = counter
           counter = 0
         end
       end
@@ -48,12 +50,12 @@ class MagRead
   private :start_marker
 
   def read
-    convert_file_to_legths if @hash.nil?
+    convert_file_to_legths if @wavelengths_hash.nil?
 
     state = :find_pilot
     pilot_counter = 0
     total_pilot_length = 0
-    @impulse_length = @cutoff = nil
+    @length_of_0 = @cutoff = nil
     @byte = 0
     @bit_counter = 0
     @reading_length = nil
@@ -63,7 +65,7 @@ class MagRead
     @header_array = []
     @checksum_array = []
 
-    @hash.each_pair { |position, len|
+    @wavelengths_hash.each_pair { |position, len|
       @current_sample_pos = position
 
       case state
@@ -72,21 +74,27 @@ class MagRead
 
         debug 20, "   -pilot- impulse length --> #{len}"
 
+        # If we read at least 200 pilot impulses by now and we encounter an impulse of length > 3.5 x '0',
+        #    then it must be the end of the pilot.
         if (pilot_counter > 200) && (len > (tpl / pilot_counter * 3.5)) then
           state = :pilot_found
-          @impulse_length = (tpl / pilot_counter)
-          @cutoff = (@impulse_length * CUTOFF_COEFF)
-          debug 5, "Pilot seqence found (final impulse length = #{len}), impulse count = #{pilot_counter}, 0/1 averaged length = #{@impulse_length}, cutoff = #{@cutoff}"
+          @length_of_0 = (tpl / pilot_counter).round(2)
+          @cutoff = Integer((@length_of_0 * CUTOFF_COEFF).round(0))
+          debug 5, 'Pilot seqence found'.green
+          debug 7, ' * '.blue.bold + "Impulse count          : #{pilot_counter.to_s.bold}"
+          debug 7, ' * '.blue.bold + "Trailer impulse length : #{len.to_s.bold}"
+          debug 7, ' * '.blue.bold + "Averaged '0' length    : #{@length_of_0.to_s.bold}"
+          debug 7, ' * '.blue.bold + "'0'/'1' cutoff         : #{@cutoff.to_s.bold}"
         else
           total_pilot_length += len
           pilot_counter += 1
           debug 40, "Pilot impulse ##{pilot_counter}, impulse length: #{len}, total sequence length = #{total_pilot_length}"
         end
       when :pilot_found then
-        debug 15, "Synchro '1' after pilot: (#{(len > @cutoff) ? 'success' : 'fail' })"
+        debug 15, "Synchro '1' after pilot: (#{(len > @cutoff) ? 'success'.green : 'failed'.red })"
         state = :pilot_found2
       when :pilot_found2 then
-        debug 15, "Synchro '0' after pilot: (#{(len < @cutoff) ? 'success' : 'fail' })"
+        debug 15, "Synchro '0' after pilot: (#{(len < @cutoff) ? 'success'.green : 'failed'.red })"
         state = :header_marker
         start_marker
       when :header_marker
@@ -101,7 +109,10 @@ class MagRead
         if read_bit(len) then
           start_marker
           @bk_file.start_address, @bk_file.length, @bk_file.name = @header_array.map{ |e| e.chr }.join.unpack("S<S<a16")
-          debug 5, "   Header read: addr=#{Tools::octal(@bk_file.start_address)}, length=#{Tools::octal(@bk_file.length)}, name=#{@bk_file.name}"
+          debug 5, "Header data read successfully".green
+          debug 7, ' * '.blue.bold + "Start address : #{Tools::octal(@bk_file.start_address).bold}"
+          debug 7, ' * '.blue.bold + "File length   : #{Tools::octal(@bk_file.length).bold}"
+          debug 7, ' * '.blue.bold + 'File name     :' + '['.yellow + @bk_file.name.bold + ']'.yellow
           state = :body_marker
         end
       when :body_marker
@@ -125,7 +136,9 @@ class MagRead
         debug 20, "      -checksum- #{@is_data_bit ? 'data' : 'sync' } impulse length --> #{len}"
         if read_bit(len) then
           @bk_file.checksum = Tools::bytes2word(*@checksum_array)
-          debug 5, "Checksum read = #{Tools::octal(@bk_file.checksum)}, computed checksum = #{Tools::octal(@bk_file.compute_checksum)}"
+          debug 5, "Checksum read successfully".green
+          debug 7, ' * '.blue.bold + "File checksum     : #{Tools::octal(@bk_file.checksum).bold}"
+          debug 7, ' * '.blue.bold + "Computed checksum : #{Tools::octal(@bk_file.compute_checksum).bold}"
           start_marker
           state = :end_trailer
         end
@@ -133,7 +146,7 @@ class MagRead
         # Trailing marker's lead length is equal to the length of at least 9 "0" impulses.
         if read_marker(len, 256, 9, :ignore_errors) then
           debug 5, "Read completed successfully."
-          debug 0, "Validating checksum: #{@bk_file.validate_checksum ? 'success!' : 'FAIL' }"
+          debug 0, "Validating checksum: #{@bk_file.validate_checksum ? 'success'.green : 'failed'.red }"
           break
         end
       end
@@ -144,7 +157,7 @@ class MagRead
   def read_bit(len)
     bit = (len > @cutoff) ? 1 : 0
 
-    raise "Bit WAY too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}}" if len > (@impulse_length * 2.8)
+    raise "Bit WAY too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}}" if len > (@length_of_0 * 2.8)
 
     if @is_data_bit then
       debug 15, "   bit ##{@bit_counter} read: #{bit}"
@@ -176,9 +189,9 @@ class MagRead
 
     case @marker_counter
     when 0 then
-      raise "Lead impulse too short " if !ignore_errors && first_impulse && (len < ((first_impulse - 0.5) * @impulse_length))
+      raise "Lead impulse too short " if !ignore_errors && first_impulse && (len < ((first_impulse - 0.5) * @length_of_0))
     when marker_len then
-      raise "Marker final impulse not found" if !ignore_errors && (len < (@impulse_length * 3.5))
+      raise "Marker final impulse not found" if !ignore_errors && (len < (@length_of_0 * 3.5))
     when marker_len + 1 then
       raise "Sync '1' after marker not found" if !ignore_errors && len < @cutoff
     when marker_len + 2 then
