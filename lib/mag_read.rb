@@ -46,7 +46,7 @@ class MagRead
     @marker_counter = 0
   end
   private :start_marker
-  
+
   def read
     convert_file_to_legths if @hash.nil?
 
@@ -101,7 +101,7 @@ class MagRead
         if read_bit(len) then
           start_marker
           @bk_file.start_address, @bk_file.length, @bk_file.name = @header_array.map{ |e| e.chr }.join.unpack("S<S<a16")
-          debug 5, "   Header read: addr=#{Tools::octal(@bk_file.start_address)}, length=#{Tools::octal(@bk_file.length)}, name=#{@bk_file.name}" 
+          debug 5, "   Header read: addr=#{Tools::octal(@bk_file.start_address)}, length=#{Tools::octal(@bk_file.length)}, name=#{@bk_file.name}"
           state = :body_marker
         end
       when :body_marker
@@ -144,7 +144,7 @@ class MagRead
   def read_bit(len)
     bit = (len > @cutoff) ? 1 : 0
 
-    raise "Bit WAY too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}}" if len > (@impulse_length * 2.8)    
+    raise "Bit WAY too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}}" if len > (@impulse_length * 2.8)
 
     if @is_data_bit then
       debug 15, "   bit ##{@bit_counter} read: #{bit}"

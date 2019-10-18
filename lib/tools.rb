@@ -20,9 +20,13 @@ module Tools
   def self.bytes2word(b0, b1)
     (b1 << 8) | b0
   end
-       
+
   def self.octal(bb)
     ('000000' + bb.to_s(8))[-6..-1]
+  end
+
+  def self.octal_byte(b)
+    ('000' + b.to_s(8))[-3..-1]
   end
 
 end
