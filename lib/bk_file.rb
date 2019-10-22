@@ -1,3 +1,6 @@
+require 'term/ansicolor'
+include Term::ANSIColor
+
 class BkFile
 
   attr_accessor :start_address
@@ -94,6 +97,41 @@ class BkFile
 
   def validate_checksum
     checksum == compute_checksum
+  end
+
+  # Compare 2 files (obtained from different recordings) to find discrepancies
+  def compare(other)
+    flag = true
+
+    self.body.each_with_index { |v, i|
+      if v != other.body[i] then
+        puts "Index: #{Tools::octal(i)}  This: #{Tools::octal(v)}  Other: #{Tools::octal(other.body[i])}"
+        flag = false
+      end
+    }
+  end
+
+  def save(prefix = "bkfile")
+    if start_address.nil? then
+      puts "Start address not defined (file not loaded?)".red
+      return
+    end
+
+    if name.nil? || name.empty? || name.length != 16 then
+      puts "File name not defined (file not loaded?)".red
+      return
+    end
+
+    if body.empty? then
+      puts "File body is empty (file not loaded?)".red
+      return
+    end
+
+    file_name = "#{prefix}.[#{name}].#{Tools::octal(start_address)}.#{Tools::octal(compute_checksum)}.bk"
+    File.open(file_name, 'wb') { |f|
+      body.each { |byte| f << byte.chr }
+    }
+    return true
   end
 
 end

@@ -11,17 +11,20 @@ class MagRead
 
   def initialize(filename, debuglevel = false)
     @debuglevel = debuglevel
-
-    reader = Reader.new(filename, Format.new(:mono, :pcm_16, 44100)).each_buffer(1024*1024*1024) do |buffer|
-      @buffer = buffer
-      debug 5, "Loaded #{buffer.samples.length.to_s.bold} samples"
-    end
-
+    @filename = filename
     @bk_file = BkFile.new
+    get_file
   end
 
   def debug(msg_level, msg)
     puts msg if msg_level <= @debuglevel
+  end
+
+  def get_file
+    reader = Reader.new(@filename, Format.new(:mono, :pcm_16, 44100)).each_buffer(1024*1024*1024) do |buffer|
+      @buffer = buffer
+      debug 5, "Loaded #{buffer.samples.length.to_s.bold} samples"
+    end
   end
 
   def convert_file_to_legths
@@ -44,11 +47,7 @@ class MagRead
 
   end
 
-  def start_marker
-    @marker_counter = 0
-  end
-  private :start_marker
-
+  # Main read loop
   def read
     convert_file_to_legths if @wavelengths_hash.nil?
 
@@ -154,6 +153,11 @@ class MagRead
 
   end
 
+  def start_marker
+    @marker_counter = 0
+  end
+  private :start_marker
+
   def read_bit(len)
     bit = (len > @cutoff) ? 1 : 0
 
@@ -165,6 +169,8 @@ class MagRead
       @byte = (@byte >> 1) | ((bit == 1) ? 128 : 0)
       @bit_counter += 1
       if @bit_counter == 8 then
+#puts  ">>>  #{Tools::octal(@reading_length - @byte_counter)} - #{@current_sample_pos}"
+
         @current_array << @byte
         @byte_counter -= 1
 
@@ -174,7 +180,8 @@ class MagRead
       end
     else # sync bit
       if bit == 1
-        raise "Sync bit too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}"
+        puts "Sync bit too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}".red
+        raise
       end
       return true if @byte_counter == 0
     end
@@ -200,6 +207,39 @@ class MagRead
     end
     @marker_counter +=1
     return false
+  end
+
+  # Experimental routine to fix that should fix poorly read waveforms
+
+  FIX_CUTOFF = 20000 # Do not perform fixing if wafeform is above this threshold
+
+  def amplify
+    @wavelengths_hash = nil
+    impulses = [ 0, 0, 0, 0, 0 ]
+
+    @buffer.samples.each_with_index { |c, i|
+      impulses.shift
+      impulses << c
+      delta1 = impulses[2] - impulses[0]
+      delta2 = impulses[4] - impulses[2]
+
+      avg = impulses.inject(:+) / impulses.size
+      if avg > -FIX_CUTOFF && avg <= 0 && delta1 > 200 && delta2 < -200 then
+        if @buffer.samples[i - 2] < 0 then
+          @buffer.samples[i - 2] = 32000
+        end
+      elsif avg < FIX_CUTOFF && avg >= 0 && delta1 < -200 && delta2 > 200 then
+        if @buffer.samples[i - 2] > 0 then
+          @buffer.samples[i - 2] = -32000
+        end
+      end
+    }
+
+    writer = Writer.new("amplified.wav", Format.new(:mono, :pcm_16, 44100))
+    writer.write(@buffer)
+    writer.close
+
+    nil
   end
 
 end
