@@ -209,8 +209,112 @@ class MagRead
     return false
   end
 
-  # Experimental routine to fix that should fix poorly read waveforms
 
+  # ----------------------- experimental code dedicated to fixing poorly read waveforms
+
+  def straighten
+    min = nil
+    max = nil
+    max_position = min_position = nil
+    current_state = :uptick
+    prev = 0
+
+    @offset_buffer = Buffer.new([ 0 ] * @buffer.samples.size, Format.new(:mono, :pcm_16, 44100))
+
+    @buffer.samples.each_with_index { |v, i|
+      case current_state
+      when :uptick then
+        if v > prev then
+          max = v
+        else
+          min = v
+          max_position = i - 1
+          current_state = :downtick
+        end
+      when :downtick then
+        if v < prev then
+          min = v
+        else
+          min_position = i - 1
+          center_waveform(max, min, max_position, min_position)
+          max = v
+          current_state = :uptick
+        end
+      end
+      prev = v
+    }
+
+    fill_gaps
+
+    @corrected_buffer = Buffer.new([ 0 ] * @buffer.samples.size, Format.new(:mono, :pcm_16, 44100))
+    @corrected_buffer.samples.each_with_index { |v, i|
+      corrected_value = @buffer.samples[i] - @offset_buffer.samples[i]
+
+      if corrected_value > 0o77770 then corrected_value = 0o77770
+      elsif corrected_value < -0o77770 then corrected_value = -0o77770
+      end
+
+      @corrected_buffer.samples[i] = corrected_value
+    }
+
+    writer = Writer.new("__offset.wav", Format.new(:mono, :pcm_16, 44100))
+    writer.write(@offset_buffer)
+    writer.close
+
+    writer = Writer.new("__corrected.wav", Format.new(:mono, :pcm_16, 44100))
+    writer.write(@corrected_buffer)
+    writer.close
+
+  end
+
+  def center_waveform(max_value, min_value, max_position, min_position)
+    return if max_value.nil? || min_value.nil?
+
+    amplitude = (max_value - min_value)
+    return if amplitude < 3000  # Ignore small irregularities
+    dy = max_value - (amplitude / 2)  # Maximum ideally should be at (amplitude / 2)
+
+    debug 40, "Adjusting centerline by #{dy} from #{max_position} to #{min_position}".red
+    max_position.upto(min_position) { |pos| @offset_buffer.samples[pos] = dy }
+  end
+
+  def fill_gaps
+    state = :no_gap
+    gap_start = gap_end = value_at_gap_start = value_at_gap_end = nil
+    prev = 0
+
+    @offset_buffer.samples.each_with_index { |v, i|
+      case state
+      when :no_gap then
+        if v == 0 then
+          state = :gap
+          gap_start = i
+          value_at_gap_start = prev
+        end
+      when :gap
+        if v != 0 then # Gap is over
+          state = :no_gap
+          gap_end = i
+          value_at_gap_end = v
+
+          if gap_start then
+            dy = value_at_gap_end - value_at_gap_start
+            dx = gap_end - gap_start
+            k = dy.to_f / dx
+
+            gap_start.upto(gap_end) { |i|
+              @offset_buffer.samples[i] = (value_at_gap_start + (i - gap_start) * k).to_i
+            }
+          end
+
+        end
+      end
+      prev = v
+    }
+  end
+
+
+=begin
   FIX_CUTOFF = 20000 # Do not perform fixing if wafeform is above this threshold
 
   def amplify
@@ -241,5 +345,6 @@ class MagRead
 
     nil
   end
+=end
 
 end

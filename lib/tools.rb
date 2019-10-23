@@ -29,4 +29,12 @@ module Tools
     ('000' + b.to_s(8))[-3..-1]
   end
 
+  def self.string_to_byte_array(str)
+    str.each_byte.collect { |x| x }
+  end
+
+  def self.word_to_byte_array(word)
+    [ word & 0o377, (word & 0o177400) >> 8 ]
+  end
+
 end
