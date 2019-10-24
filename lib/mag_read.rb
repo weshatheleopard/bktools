@@ -3,8 +3,9 @@ require 'term/ansicolor'
 include Term::ANSIColor
 
 class MagRead
-  CUTOFF_COEFF = 1.7  # Impulses longer than (base impulse length * CUTOFF_COEFF) will be
-                      # considered to encode "1"sl; shorter - "0"s.
+  CUTOFF_COEFF = 1.7   # Impulses longer than (base impulse length * CUTOFF_COEFF) will be
+                       # considered to encode "1"s; shorter - "0"s.
+  BIT_TOO_LONG = 2.8   # No bit impulse should be this long. Must be file format issue.
   include WaveFile
 
   attr_accessor :bk_file
@@ -13,6 +14,7 @@ class MagRead
     @debuglevel = debuglevel
     @filename = filename
     @bk_file = BkFile.new
+    @min_correction = 3000 # Minimal hump to be centered
     get_file
   end
 
@@ -161,7 +163,10 @@ class MagRead
   def read_bit(len)
     bit = (len > @cutoff) ? 1 : 0
 
-    raise "Bit WAY too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}}" if len > (@length_of_0 * 2.8)
+    if len > (@length_of_0 * BIT_TOO_LONG) then
+      puts "Bit WAY too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}}".red
+      raise
+    end
 
     if @is_data_bit then
       debug 15, "   bit ##{@bit_counter} read: #{bit}"
@@ -169,8 +174,6 @@ class MagRead
       @byte = (@byte >> 1) | ((bit == 1) ? 128 : 0)
       @bit_counter += 1
       if @bit_counter == 8 then
-#puts  ">>>  #{Tools::octal(@reading_length - @byte_counter)} - #{@current_sample_pos}"
-
         @current_array << @byte
         @byte_counter -= 1
 
@@ -198,11 +201,11 @@ class MagRead
     when 0 then
       raise "Lead impulse too short " if !ignore_errors && first_impulse && (len < ((first_impulse - 0.5) * @length_of_0))
     when marker_len then
-      raise "Marker final impulse not found" if !ignore_errors && (len < (@length_of_0 * 3.5))
+      raise "Marker final impulse not found (@ #{@current_sample_pos})" if !ignore_errors && (len < (@length_of_0 * 3.5))
     when marker_len + 1 then
-      raise "Sync '1' after marker not found" if !ignore_errors && len < @cutoff
+      raise "Sync '1' after marker not found (@ #{@current_sample_pos})" if !ignore_errors && len < @cutoff
     when marker_len + 2 then
-      raise "Sync '0' after marker not found" if !ignore_errors && len > @cutoff
+      raise "Sync '0' after marker not found (@ #{@current_sample_pos})" if !ignore_errors && len > @cutoff
       return true
     end
     @marker_counter +=1
@@ -219,6 +222,7 @@ class MagRead
     current_state = :uptick
     prev = 0
 
+    # This is where offset values will be stored. If needs be. it can be saved.
     @offset_buffer = Buffer.new([ 0 ] * @buffer.samples.size, Format.new(:mono, :pcm_16, 44100))
 
     @buffer.samples.each_with_index { |v, i|
@@ -257,21 +261,25 @@ class MagRead
       @corrected_buffer.samples[i] = corrected_value
     }
 
-    writer = Writer.new("__offset.wav", Format.new(:mono, :pcm_16, 44100))
-    writer.write(@offset_buffer)
-    writer.close
+    # writer = Writer.new("__offset.wav", Format.new(:mono, :pcm_16, 44100))
+    # writer.write(@offset_buffer)
+    # writer.close
 
-    writer = Writer.new("__corrected.wav", Format.new(:mono, :pcm_16, 44100))
+    @buffer = @corrected_buffer
+
+    writer = Writer.new("__straigthened.wav", Format.new(:mono, :pcm_16, 44100))
     writer.write(@corrected_buffer)
     writer.close
 
+    nil
   end
 
   def center_waveform(max_value, min_value, max_position, min_position)
     return if max_value.nil? || min_value.nil?
 
     amplitude = (max_value - min_value)
-    return if amplitude < 3000  # Ignore small irregularities
+    return if amplitude < @min_correction  # Ignore small irregularities
+
     dy = max_value - (amplitude / 2)  # Maximum ideally should be at (amplitude / 2)
 
     debug 40, "Adjusting centerline by #{dy} from #{max_position} to #{min_position}".red
@@ -312,39 +320,5 @@ class MagRead
       prev = v
     }
   end
-
-
-=begin
-  FIX_CUTOFF = 20000 # Do not perform fixing if wafeform is above this threshold
-
-  def amplify
-    @wavelengths_hash = nil
-    impulses = [ 0, 0, 0, 0, 0 ]
-
-    @buffer.samples.each_with_index { |c, i|
-      impulses.shift
-      impulses << c
-      delta1 = impulses[2] - impulses[0]
-      delta2 = impulses[4] - impulses[2]
-
-      avg = impulses.inject(:+) / impulses.size
-      if avg > -FIX_CUTOFF && avg <= 0 && delta1 > 200 && delta2 < -200 then
-        if @buffer.samples[i - 2] < 0 then
-          @buffer.samples[i - 2] = 32000
-        end
-      elsif avg < FIX_CUTOFF && avg >= 0 && delta1 < -200 && delta2 > 200 then
-        if @buffer.samples[i - 2] > 0 then
-          @buffer.samples[i - 2] = -32000
-        end
-      end
-    }
-
-    writer = Writer.new("amplified.wav", Format.new(:mono, :pcm_16, 44100))
-    writer.write(@buffer)
-    writer.close
-
-    nil
-  end
-=end
 
 end
