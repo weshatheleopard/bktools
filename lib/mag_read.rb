@@ -267,7 +267,7 @@ class MagRead
 
     @buffer = @corrected_buffer
 
-    writer = Writer.new("__straigthened.wav", Format.new(:mono, :pcm_16, 44100))
+    writer = Writer.new("__straightened.wav", Format.new(:mono, :pcm_16, 44100))
     writer.write(@corrected_buffer)
     writer.close
 
