@@ -127,10 +127,17 @@ class BkFile
       return
     end
 
-    file_name = "#{prefix}.[#{name}].#{Tools::octal(start_address)}.#{Tools::octal(compute_checksum)}.bk"
-    File.open(file_name, 'wb') { |f|
+    File.open("#{prefix}.[#{name}].metadata", 'w') { |f|
+      f.puts  "File name     : #{name}"
+      f.puts  "Start address : #{Tools::octal(start_address)}"
+      f.puts  "File length   : #{Tools::octal(length)}"
+      f.puts  "Data checksum : #{Tools::octal(compute_checksum)}"
+    }
+
+    File.open("#{prefix}.[#{name}].bin", 'wb') { |f|
       body.each { |byte| f << byte.chr }
     }
+
     return true
   end
 
