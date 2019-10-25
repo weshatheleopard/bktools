@@ -52,7 +52,7 @@ Byte sequence:
   * Bit #7 (MSB)
 }
 ```
-Marker sequence (first_impulse_length || 0, impulse_count):
+Marker sequence (impulse_count, first_impulse_length || 0):
 ```
 {
   * "possibly long 0" (first_impulse_length + 23d / first_impulse_length + 22d)
@@ -65,10 +65,10 @@ Marker sequence (first_impulse_length || 0, impulse_count):
 File sequence :
 ```
 {
-* marker sequence(0, 4096d)  - pilot marker
-* marker sequence(0, 8d)     - header marker
+* marker sequence(4096d, 0)  - pilot marker
+* marker sequence(8d, 0)     - header marker
 * byte sequence              - header data address (2 bytes) + length (2 bytes) + file name (16d bytes)
-* marker sequence(0, 8d)     - data marker
+* marker sequence(8d, 0)     - data marker
 * byte sequence              - array_data ("length" bytes) + checksum (2 bytes)
 * marker(256d, 256d)         - trailer pilot
 }
