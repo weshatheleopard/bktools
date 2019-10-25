@@ -128,7 +128,7 @@ class BkFile
     end
 
     File.open("#{prefix}.[#{name}].metadata", 'w') { |f|
-      f.puts  "File name     : #{name}"
+      f.puts  "File name     : [#{name}]"
       f.puts  "Start address : #{Tools::octal(start_address)}"
       f.puts  "File length   : #{Tools::octal(length)}"
       f.puts  "Data checksum : #{Tools::octal(compute_checksum)}"
