@@ -6,7 +6,7 @@ module WaveformFixer
   # You should understand what you're doing to use this!
 
   # This method fixes the "floating zero-level line" problem, where impulses happen to be floating up and down.
-  # After calling this method, 
+  # After calling this method, the centerline will be straihtened and all impulses will be 0-centered.
   def straighten(original_buffer = @buffer)
     min = nil
     max = nil
@@ -53,7 +53,10 @@ module WaveformFixer
       corrected_buffer.samples[i] = corrected_value
     }
 
+    # Save the centerline offset buffer (so you can see how adjustment was applied)
     # Writer.new("__offset.wav", Format.new(:mono, :pcm_16, 44100)) { |writer| write(offset_buffer) }
+
+    # Save the corrected waveform
     # Writer.new("__straightened.wav", Format.new(:mono, :pcm_16, 44100)) { |writer| write(corrected_buffer) }
 
     corrected_buffer
@@ -109,7 +112,7 @@ module WaveformFixer
   # Even more experimental method to fix poorly read sync bits after "1"-bits
 
   def fix_sync
-    # * When the value becomes negative, skip 14 pulses
+    # * When the value becomes negative, skip 14 pulses (the length of "1")
     # * Find max value after that
     # * If max is negative, move it to be positive
 
@@ -141,14 +144,12 @@ module WaveformFixer
       end  
 
       if max && @buffer.samples[max] < 0 then
-        puts "MAX!!! #{max}"
         @buffer.samples[max] = 32500
       end
 
     end
 
-    writer = Writer.new("fixed.wav", Format.new(:mono, :pcm_16, 44100))
-    writer.write(@buffer); writer.close
+    Writer.new("fixed.wav", Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(@buffer) }
 
   end
 
