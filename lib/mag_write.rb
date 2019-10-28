@@ -25,7 +25,13 @@ class MagWrite
     @bk_file = bk_file
   end
 
-  def save(filename)
+  def write(filename)
+    write_to_buffer
+
+    Writer.new(filename, Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(@buffer) }
+  end
+
+  def write_to_buffer
     @buffer = Buffer.new([ ], Format.new(:mono, :pcm_16, 44100))
 
     header_array = Tools::word_to_byte_array(@bk_file.start_address) +
@@ -39,8 +45,6 @@ class MagWrite
     write_byte_sequence(@bk_file.body)
     write_byte_sequence(Tools::word_to_byte_array(@bk_file.compute_checksum))
     write_marker(256, 256)
-
-    Writer.new(filename, Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(@buffer) }
   end
 
   def write_marker(impulse_count, first_impulse_length = 0)
@@ -79,6 +83,38 @@ class MagWrite
   def write_impulse(volume, length_pos = 0, length_neg = 0)
     (length_pos.to_f / SOBS_TO_PULSES_COEFF).to_i.times { @buffer.samples << volume }
     (length_neg.to_f / SOBS_TO_PULSES_COEFF).to_i.times { @buffer.samples << -volume }
+  end
+
+  # Give the waveform a sine shape so it doesn't sound nearly as bad. Purely cosmetic method.
+  def soften
+    softened_buffer = Buffer.new([ ], Format.new(:mono, :pcm_16, 44100))
+    i = start = volume = 0
+    state = :pos
+
+    while (volume = @buffer.samples[start + i]) do
+      case state
+      when :pos then
+        if (volume > 0) then i += 1
+        else state = :neg
+        end
+      when :neg
+        if (volume < 0) then i += 1
+        else
+          i += 1
+          sine = 2 * Math::PI / i
+
+          0.upto(i) do |n|
+            softened_buffer.samples[start + n] = (@buffer.samples[start + n].abs * Math::sin(sine * n)).to_i
+          end
+
+          state = :pos
+          start += i
+          i = 1
+        end
+      end
+    end
+
+    @buffer = softened_buffer
   end
 
 end

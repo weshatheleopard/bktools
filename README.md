@@ -74,9 +74,13 @@ File sequence :
   * marker(256d, 256d)         - trailer pilot
 }
 ```
-
 ## Reading data from a WAV file
 
 ```
-require 'mag_read' ; m = MagRead.new("name.wav", 50); m.read
+require 'mag_read' ; m = MagRead.new('name.wav', 50); m.read
+```
+## Writing data to a WAV file
+
+```
+require 'mag_write' ; writer = MagWrite.new(bk_file); writer.write('some_filename.wav')
 ```
