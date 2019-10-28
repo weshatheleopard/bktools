@@ -146,13 +146,14 @@ class MagRead
       when :end_trailer then
         # Trailing marker's lead length is equal to the length of at least 9 "0" impulses.
         if read_marker(len, 256, 9, :ignore_errors) then
-          debug 5, "Read completed successfully."
+          debug 5, "Read completed successfully.".green
           debug 0, "Validating checksum: #{@bk_file.validate_checksum ? 'success'.green : 'failed'.red }"
           break
         end
       end
-    }  ;1
+    }
 
+    debug 0, "Read complete."
   end
 
   def start_marker
