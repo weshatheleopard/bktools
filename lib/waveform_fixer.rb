@@ -14,8 +14,8 @@ module WaveformFixer
     current_state = :uptick
     prev = 0
 
-    # This is where offset values will be stored. If needs be. it can be saved.
-    offset_buffer = Buffer.new([ 0 ] * original_buffer.samples.size, Format.new(:mono, :pcm_16, 44100))
+    # This is where offset values will be stored. If needs be, this buffer can be saved.
+    offset_buffer = WaveFile::Buffer.new([ 0 ] * original_buffer.samples.size, WaveFile::Format.new(:mono, :pcm_16, 44100))
 
     original_buffer.samples.each_with_index { |v, i|
       case current_state
@@ -42,7 +42,7 @@ module WaveformFixer
 
     fill_gaps(offset_buffer)
 
-    corrected_buffer = Buffer.new([ 0 ] * original_buffer.samples.size, Format.new(:mono, :pcm_16, 44100))
+    corrected_buffer = WaveFile::Buffer.new([ 0 ] * original_buffer.samples.size, WaveFile::Format.new(:mono, :pcm_16, 44100))
     corrected_buffer.samples.each_with_index { |v, i|
       corrected_value = original_buffer.samples[i] - offset_buffer.samples[i]
 
@@ -54,10 +54,10 @@ module WaveformFixer
     }
 
     # Save the centerline offset buffer (so you can see how adjustment was applied)
-    # Writer.new("__offset.wav", Format.new(:mono, :pcm_16, 44100)) { |writer| write(offset_buffer) }
+    WaveFile::Writer.new("__offset.wav", WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(offset_buffer) }
 
     # Save the corrected waveform
-    # Writer.new("__straightened.wav", Format.new(:mono, :pcm_16, 44100)) { |writer| write(corrected_buffer) }
+    WaveFile::Writer.new("__straightened.wav", WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(corrected_buffer) }
 
     corrected_buffer
   end
@@ -74,7 +74,7 @@ module WaveformFixer
     max_position.upto(min_position) { |pos| offset_buffer.samples[pos] = dy }
   end
 
-  def fill_gaps
+  def fill_gaps(offset_buffer)
     state = :no_gap
     gap_start = gap_end = value_at_gap_start = value_at_gap_end = nil
     prev = 0
@@ -99,7 +99,7 @@ module WaveformFixer
             k = dy.to_f / dx
 
             gap_start.upto(gap_end) { |i|
-              @offset_buffer.samples[i] = (value_at_gap_start + (i - gap_start) * k).to_i
+              offset_buffer.samples[i] = (value_at_gap_start + (i - gap_start) * k).to_i
             }
           end
 
@@ -149,7 +149,7 @@ module WaveformFixer
 
     end
 
-    Writer.new("fixed.wav", Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(@buffer) }
+    WaveFile::Writer.new("fixed.wav", WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(@buffer) }
 
   end
 

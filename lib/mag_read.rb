@@ -6,9 +6,10 @@ class MagRead
   CUTOFF_COEFF = 1.7   # Impulses longer than (base impulse length * CUTOFF_COEFF) will be
                        # considered to encode "1"s; shorter - "0"s.
   BIT_TOO_LONG = 2.8   # No bit impulse should be this long. Must be file format issue.
-  include WaveFile
 
   attr_accessor :bk_file
+
+  attr_accessor :buffer
 
   def initialize(filename, debuglevel = false)
     @debuglevel = debuglevel
@@ -23,7 +24,7 @@ class MagRead
   end
 
   def get_file
-    reader = Reader.new(@filename, Format.new(:mono, :pcm_16, 44100)).each_buffer(1024*1024*1024) do |buffer|
+    reader = WaveFile::Reader.new(@filename, WaveFile::Format.new(:mono, :pcm_16, 44100)).each_buffer(1024*1024*1024) do |buffer|
       @buffer = buffer
       debug 5, "Loaded #{buffer.samples.length.to_s.bold} samples"
     end
