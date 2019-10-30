@@ -35,7 +35,7 @@ Logical "1":
 Data bit sequence:
 ```
 {
-  * Data bit ("0" / "1")
+  * Data bit ("0" or "1")
   * Sync bit ("0")
 }
 ```
