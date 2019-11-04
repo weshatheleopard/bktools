@@ -15,7 +15,6 @@ class MagRead
     @debuglevel = debuglevel
     @filename = filename
     @bk_file = BkFile.new
-    @min_correction = 3000 # Minimal hump to be centered
     get_file
   end
 
@@ -148,12 +147,11 @@ class MagRead
         # Trailing marker's lead length is equal to the length of at least 9 "0" impulses.
         if read_marker(len, 256, 9, :ignore_errors) then
           debug 5, "Read completed successfully.".green
-          debug 0, "Validating checksum: #{@bk_file.validate_checksum ? 'success'.green : 'failed'.red }"
           break
         end
       end
     }
-
+    debug 0, "Validating checksum: #{@bk_file.validate_checksum ? 'success'.green : 'failed'.red }"
     debug 0, "Read complete."
   end
 
@@ -166,7 +164,7 @@ class MagRead
     bit = (len > @cutoff) ? 1 : 0
 
     if len > (@length_of_0 * BIT_TOO_LONG) then
-      puts "Bit WAY too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}}".red
+      puts "Bit WAY too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}".red
       raise
     end
 
@@ -197,7 +195,7 @@ class MagRead
   end
 
   def read_marker(len, marker_len = 8, first_impulse = nil, ignore_errors = false)
-    debug 15, "Processing block start marker: impulse ##{@marker_counter}, imp_length=#{len}; lead_impulse_length=#{first_impulse}, expecting #{marker_len} impulses"
+    debug 15, "Processing block start marker: impulse ##{@marker_counter} @ #{@current_sample_pos}, imp_length=#{len}; lead_impulse_length=#{first_impulse}, expecting #{marker_len} impulses"
 
     case @marker_counter
     when 0 then

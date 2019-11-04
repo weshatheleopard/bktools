@@ -18,9 +18,13 @@ module WaveformFixer
     offset_buffer = WaveFile::Buffer.new([ 0 ] * original_buffer.samples.size, WaveFile::Format.new(:mono, :pcm_16, 44100))
 
     original_buffer.samples.each_with_index { |v, i|
+      if v > 31000 then v = 31000
+      elsif v < -31000 then v = -31000
+      end
+
       case current_state
       when :uptick then
-        if v > prev then
+        if v >= prev then
           max = v
         else
           min = v
@@ -28,7 +32,7 @@ module WaveformFixer
           current_state = :downtick
         end
       when :downtick then
-        if v < prev then
+        if v <= prev then
           min = v
         else
           min_position = i - 1
@@ -62,11 +66,11 @@ module WaveformFixer
     corrected_buffer
   end
 
-  def center_waveform(offset_buffer, max_value, min_value, max_position, min_position)
+  def center_waveform(offset_buffer, max_value, min_value, max_position, min_position, min_correction = 6000)
     return if max_value.nil? || min_value.nil?
 
     amplitude = (max_value - min_value)
-    return if amplitude < @min_correction  # Ignore small irregularities
+    return if amplitude < min_correction  # Ignore small irregularities
 
     dy = max_value - (amplitude / 2)  # Maximum ideally should be at (amplitude / 2)
 
