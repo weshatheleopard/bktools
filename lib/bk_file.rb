@@ -142,4 +142,44 @@ class BkFile
     return true
   end
 
+  def self.load(name)
+    bkf = self.new
+
+    File.open("#{name}.bin", 'rb') { |f|
+      bkf.body = []
+      data = f.read
+      data.each_byte { |b| bkf.body << b }
+    }
+
+    File.open("#{name}.metadata", 'rb') { |f|
+      f.each_line { |str|
+        # We don't want Ruby to mess around with strings and encodings, so
+        # we're going to manipulate pure bytes.
+
+        title = str.bytes[0..15].pack('c*')
+        value = str.bytes[16..-2]
+
+        case title
+        when "File name     : " then
+          bkf.name = value[1..-2].pack('c*')
+        when "Start address : " then
+          bkf.start_address = Tools::read_octal(value.pack('c*'))
+        when "File length   : "
+          bkf.length = Tools::read_octal(value.pack('c*'))
+        when "Tape checksum : " then
+          bkf.checksum = Tools::read_octal(value.pack('c*'))
+        when "Data checksum : " then
+          data_checksum = bkf.compute_checksum
+          rause if data_checksum != Tools::read_octal(value.pack('c*'))
+        end
+      }
+    }
+
+    return bkf
+  end
+
+  def binary_content
+    body.pack('c*')
+  end
+
 end

@@ -3,7 +3,7 @@ require 'term/ansicolor'
 include Term::ANSIColor
 
 class MagRead
-  CUTOFF_COEFF = 1.7   # Impulses longer than (base impulse length * CUTOFF_COEFF) will be
+  CUTOFF_COEFF = 1.6   # Impulses longer than (base impulse length * CUTOFF_COEFF) will be
                        # considered to encode "1"s; shorter - "0"s.
   BIT_TOO_LONG = 2.8   # No bit impulse should be this long. Must be file format issue.
 
@@ -11,7 +11,7 @@ class MagRead
 
   attr_accessor :buffer
 
-  def initialize(filename, debuglevel = false)
+  def initialize(filename, debuglevel = 0)
     @debuglevel = debuglevel
     @filename = filename
     @bk_file = BkFile.new

@@ -37,4 +37,8 @@ module Tools
     [ word & 0o377, (word & 0o177400) >> 8 ]
   end
 
+  def self.read_octal(str)
+    str.to_i(8)
+  end
+
 end
