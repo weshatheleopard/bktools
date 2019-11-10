@@ -258,8 +258,8 @@ class MagRead
         position_in_file += 1
 
         if split_locations.include?(position_in_file) then
-          file_name = "#{piece_start_location}-#{1}.wav"
-          puts "Saving: #{file_name}.wav"
+          file_name = "#{('0000000000' + piece_start_location.to_s)[-10..-1]}-#{('0000000000' + position_in_file.to_s)[-10..-1]}.wav"
+          puts "Saving: #{file_name}"
           WaveFile::Writer.new(file_name, WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(current_write_buffer) }
 
           # Start collectiong a new file
