@@ -1,13 +1,15 @@
 require 'wavefile'
 
 module WaveformFixer
+  MIN_CORRECTION = 5000
+
   # This modiule contains experimental code for MagReader the is intended to repair files
   #   that were imperfectly read from the tape (with offset reading head, etc.)
   # You should understand what you're doing to use this!
 
   # This method fixes the "floating zero-level line" problem, where impulses happen to be floating up and down.
   # After calling this method, the centerline will be straihtened and all impulses will be 0-centered.
-  def straighten(original_buffer = @buffer)
+  def straighten(original_buffer)
     min = nil
     max = nil
     max_position = min_position = nil
@@ -66,8 +68,10 @@ module WaveformFixer
     corrected_buffer
   end
 
-  def center_waveform(offset_buffer, max_value, min_value, max_position, min_position, min_correction = 6000)
+  def center_waveform(offset_buffer, max_value, min_value, max_position, min_position, min_correction = nil)
     return if max_value.nil? || min_value.nil?
+
+    min_correction ||= MIN_CORRECTION
 
     amplitude = (max_value - min_value)
     return if amplitude < min_correction  # Ignore small irregularities
@@ -115,6 +119,7 @@ module WaveformFixer
 
   # Even more experimental method to fix poorly read sync bits after "1"-bits
 
+=begin
   def fix_sync
     # * When the value becomes negative, skip 14 pulses (the length of "1")
     # * Find max value after that
@@ -156,5 +161,6 @@ module WaveformFixer
     WaveFile::Writer.new("fixed.wav", WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(@buffer) }
 
   end
+=end
 
 end
