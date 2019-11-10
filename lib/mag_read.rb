@@ -251,7 +251,7 @@ class MagRead
 
     reader = WaveFile::Reader.new(@filename, WaveFile::Format.new(:mono, :pcm_16, 44100))
     reader.each_buffer(1024*1024) do |buffer|
-      debug 5, "Loaded #{buffer.samples.length.to_s.bold} samples"
+      debug 10, "Loaded #{buffer.samples.length.to_s.bold} samples"
 
       buffer.samples.each { |c|
         current_write_buffer.samples << c
@@ -259,7 +259,7 @@ class MagRead
 
         if split_locations.include?(position_in_file) then
           file_name = "#{('0000000000' + piece_start_location.to_s)[-10..-1]}-#{('0000000000' + position_in_file.to_s)[-10..-1]}.wav"
-          puts "Saving: #{file_name}"
+          debug 5, "Saving: #{file_name}"
           WaveFile::Writer.new(file_name, WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(current_write_buffer) }
 
           # Start collectiong a new file
