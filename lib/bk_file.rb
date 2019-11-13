@@ -112,6 +112,9 @@ class BkFile
   end
 
   def save(prefix = "bkfile")
+    safe_name = name.gsub(/[^-_., 0-9a-zA-Z]/, '_')
+    base_name = "#{prefix}.[#{safe_name}]"
+
     if start_address.nil? then
       puts "Start address not defined (file not loaded?)".red
       return
@@ -127,7 +130,7 @@ class BkFile
       return
     end
 
-    File.open("#{prefix}.[#{name}].metadata", 'wb') { |f|
+    File.open("#{base_name}.metadata", 'wb') { |f|
       f.puts  "File name     : [#{name}]"
       f.puts  "Start address : #{Tools::octal(start_address)}"
       f.puts  "File length   : #{Tools::octal(length)}"
@@ -135,7 +138,7 @@ class BkFile
       f.puts  "Data checksum : #{Tools::octal(compute_checksum)}"
     }
 
-    File.open("#{prefix}.[#{name}].bin", 'wb') { |f|
+    File.open("#{base_name}.bin", 'wb') { |f|
       body.each { |byte| f << byte.chr }
     }
 

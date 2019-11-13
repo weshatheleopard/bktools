@@ -4,7 +4,7 @@ require 'term/ansicolor'
 include Term::ANSIColor
 
 module TapeSplitter
-  DISCREPANCY = 6      # Allowed number of samples difference in pilot squence
+  DISCREPANCY = 4      # Allowed number of samples difference in pilot squence
 
   # Split a wingle wav file containing the entire tape into multiple
   # WAV files each containing and individual BK file recording.
@@ -24,7 +24,9 @@ module TapeSplitter
         counter += 1
       else
         # Discrepancy too large. Let's see if it's an accident or an actual start marker.
-        if (counter > 0o5000) && (len > (3.5 * prev_len)) then  # So it is an actual start marker.
+        if (counter > 0o5000) && (len > (3 * prev_len)) then  # So it is an actual start marker.
+          debug 8, "Pilot sequence detected at ##{start_pos_candidate.to_s.bold}-#{position.to_s.bold}"
+
           split_locations << start_pos_candidate
         end  # Just an accident. Start over.
 
@@ -54,7 +56,9 @@ module TapeSplitter
         if split_locations.include?(position_in_file) then
           file_name = "#{('0000000000' + piece_start_location.to_s)[-10..-1]}-#{('0000000000' + position_in_file.to_s)[-10..-1]}.wav"
           debug 5, "Saving: #{file_name}"
-          WaveFile::Writer.new(file_name, WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(current_write_buffer) }
+          WaveFile::Writer.new(file_name, WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer|
+            writer.write(current_write_buffer)
+          }
 
           # Start collectiong a new file
           piece_start_location = position_in_file
@@ -62,7 +66,6 @@ module TapeSplitter
         end
       }
     end
-
   end
 
   def make_write_buffer()
