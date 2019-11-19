@@ -6,38 +6,60 @@ include Term::ANSIColor
 module TapeSplitter
   DISCREPANCY = 4      # Allowed number of samples difference in pilot squence
 
-  # Split a wingle wav file containing the entire tape into multiple
-  # WAV files each containing and individual BK file recording.
-  def split_tape
-    convert_file_to_legths if @wavelengths_hash.nil?
-
-    prev_len = 0
+  def analyze_tape
+    @current_sample_pos = 0
+    @prev_len = 0
+    @pilot_counter = 0
+    @start_pos_candidate = 0
+    @split_locations = [ ]
     counter = 0
 
-    start_pos_candidate = 0
-    split_locations = [ ]
+    reader = WaveFile::Reader.new(@filename, WaveFile::Format.new(:mono, :pcm_16, 44100))
+    reader.each_buffer(1024*1024) do |buffer|
+      debug 5, "Loaded #{buffer.samples.length.to_s.bold} samples"
 
-    @wavelengths_hash.each_pair { |position, len|
-      # If this bit is about as long as the previous one, this can be the header pilot sequence.
-      # Let's count how long it is.
-      if (len - prev_len).abs < DISCREPANCY then
-        counter += 1
-      else
-        # Discrepancy too large. Let's see if it's an accident or an actual start marker.
-        if (counter > 0o5000) && (len > (3 * prev_len)) then  # So it is an actual start marker.
-          debug 8, "Pilot sequence detected at ##{start_pos_candidate.to_s.bold}-#{position.to_s.bold}"
+      buffer.samples.each { |c|
+        @current_sample_pos += 1
 
-          split_locations << start_pos_candidate
-        end  # Just an accident. Start over.
+        if (c > 0) ^ @invert_waveform then
+          counter += 1
+        else
+          if counter != 0 then
+            analyze_impulse(counter)
+            counter = 0
+          end
+        end
+      }
+    end
 
-        counter = 0
-        start_pos_candidate = position
-      end
+    @split_locations << @start_pos_candidate
+    @split_locations
+  end
 
-      prev_len = len
-    }
+  def analyze_impulse(len)
+    # If this bit is about as long as the previous one, this can be the header pilot sequence.
+    # Let's count how long it is.
+    if (len - @prev_len).abs < DISCREPANCY then
+      @pilot_counter += 1
+    else
+      # Discrepancy too large. Let's see if it's an accident or an actual start marker.
+      if (@pilot_counter > 0o5000) && (len > (3 * @prev_len)) then  # So it is an actual start marker.
+        debug 8, "Pilot sequence detected at ##{@start_pos_candidate.to_s.bold}-#{@current_sample_pos.to_s.bold}"
 
-    split_locations << start_pos_candidate
+        @split_locations << @start_pos_candidate
+      end  # Just an accident. Start over.
+
+      @pilot_counter = 0
+      @start_pos_candidate = @current_sample_pos
+    end
+
+    @prev_len = len
+  end
+
+  # Split a single wav file containing the entire tape into multiple
+  # WAV files each containing and individual BK file recording.
+  def split_tape
+    split_locations = analyze_tape
 
     # Now proceed to actually split the file
 
