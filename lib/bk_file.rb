@@ -109,6 +109,8 @@ class BkFile
         flag = false
       end
     }
+
+    flag
   end
 
   def save(prefix = "bkfile")

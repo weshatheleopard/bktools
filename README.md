@@ -79,6 +79,27 @@ File sequence :
 ```
 require 'mag_reader' ; m = MagReader.new('name.wav', 50); m.read
 ```
+
+## Saving read file to disk
+
+```
+m.bk_file.save
+```
+
+## Load file from the disk
+
+```
+f = BkFile.load "some_file_name"
+```
+
+## Compare files and print discrepancies
+
+```
+f1 = BkFile.load "some_file_name"
+f2 = BkFile.load "another_file_name"
+f1.compare(f2)
+```
+
 ## Writing data to a WAV file
 
 ```
