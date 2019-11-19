@@ -2,7 +2,7 @@ require 'wavefile'
 require 'term/ansicolor'
 include Term::ANSIColor
 
-class MagWrite
+class MagWriter
   include WaveFile
 
   attr_accessor :bk_file

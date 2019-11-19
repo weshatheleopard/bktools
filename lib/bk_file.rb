@@ -112,7 +112,7 @@ class BkFile
   end
 
   def save(prefix = "bkfile")
-    safe_name = name.gsub(/[^-_., 0-9a-zA-Z]/, '_')
+    safe_name = name.gsub(/[^+\-'_., 0-9a-zA-Z]/, '_')
     base_name = "#{prefix}.[#{safe_name}]"
 
     if start_address.nil? then

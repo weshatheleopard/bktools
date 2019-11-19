@@ -9,7 +9,16 @@ module WaveformFixer
 
   # This method fixes the "floating zero-level line" problem, where impulses happen to be floating up and down.
   # After calling this method, the centerline will be straihtened and all impulses will be 0-centered.
-  def straighten(original_buffer)
+  def straighten()
+ #FIXME
+    original_buffer = nil
+
+    reader = WaveFile::Reader.new(@filename, WaveFile::Format.new(:mono, :pcm_16, 44100))
+    reader.each_buffer(1024*1024*1024) do |buffer|
+      debug 5, "Loaded #{buffer.samples.length.to_s.bold} samples"
+      original_buffer = buffer
+    end
+
     min = nil
     max = nil
     max_position = min_position = nil
