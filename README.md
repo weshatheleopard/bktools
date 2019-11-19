@@ -77,18 +77,18 @@ File sequence :
 ## Reading data from a WAV file
 
 ```
-require 'mag_read' ; m = MagReader.new('name.wav', 50); m.read
+require 'mag_reader' ; m = MagReader.new('name.wav', 50); m.read
 ```
 ## Writing data to a WAV file
 
 ```
-require 'mag_write' ; writer = MagWriter.new(bk_file); writer.write('some_filename.wav')
+require 'mag_writer' ; writer = MagWriter.new(bk_file); writer.write('some_filename.wav')
 ```
 ## Automatic splitting
 
 In case you have one big WAV image of a magnetic tape with multiple files on it, there's a method that will split such file into a few WAV files corresponding to a standard-format tape file each.
 
 ```
-require 'mag_read' ; m = MagReader.new('tape.wav', 50); m.split_tape
+require 'mag_reader' ; m = MagReader.new('tape.wav', 50); m.split_tape
 
 ```
