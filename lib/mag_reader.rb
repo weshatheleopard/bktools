@@ -162,6 +162,7 @@ attr_accessor :debug_bytes
 
   def start_marker
     @marker_counter = 0
+    @marker_state = :marker_lead
   end
   private :start_marker
 
@@ -200,20 +201,35 @@ puts @current_sample_pos if debug_bytes && debug_bytes.include?(@current_array.s
     return false
   end
 
-  def read_marker(len, marker_len = 8, first_cycle = nil, ignore_errors = false)
-    debug(15) { "Processing block start marker: cycle ##{@marker_counter} @ #{@current_sample_pos}, imp_length=#{len}; lead_cycle_length=#{first_cycle}, expecting #{marker_len} cycles" }
+  def read_marker(len, marker_body_length = 8, first_cycle = nil, ignore_errors = false)
+    debug(15) { "Processing block start marker: cycle ##{@marker_counter} @ #{@current_sample_pos}, imp_length=#{len}; lead_cycle_length=#{first_cycle}, expecting #{marker_body_length} cycles" }
 
-    case @marker_counter
-    when 0 then
-      raise "Lead cycle too short " if !ignore_errors && first_cycle && (len < ((first_cycle - 0.5) * @length_of_0))
-    when marker_len then
-      raise "Marker final cycle not found (@ #{@current_sample_pos}); cycle #{len} long, expecting at least #{(@length_of_0 * 3.5)} long" if !ignore_errors && (len < (@length_of_0 * 3.5))
-    when marker_len + 1 then
+    case @marker_state
+    when :marker_lead then # Marker lead impulse
+      if first_cycle && (len < ((first_cycle - 0.5) * @length_of_0)) then
+        raise "Lead cycle too short " if !ignore_errors
+      end
+      @marker_counter = 0
+      @marker_state = :marker_body
+    when :marker_body then
+      if (@marker_counter > 2) && (len > @cutoff) then
+        if (len < (@length_of_0 * 3.5)) then
+          raise "Marker final cycle not found (@ #{@current_sample_pos}); cycle #{len} long, expecting at least #{(@length_of_0 * 3.5)} long" if !ignore_errors
+        end
+        @marker_state = :post_marker_1
+      end
+    when :post_marker_1 then
       raise "Sync '1' after marker not found (@ #{@current_sample_pos})" if !ignore_errors && (len < @cutoff)
-    when marker_len + 2 then
-      raise "Sync '0' after marker not found (@ #{@current_sample_pos})" if !ignore_errors && (len > @cutoff)
+      @marker_state = :post_marker_0
+    when :post_marker_0 then
+      if !ignore_errors then
+        raise "Sync '0' after marker not found (@ #{@current_sample_pos})"  if len > @cutoff
+        raise "Marker too short" if @marker_counter < (marker_body_length + 2)
+      end
+
       return true
     end
+
     @marker_counter +=1
     return false
   end
