@@ -15,6 +15,7 @@ class MagReader
 
   attr_accessor :bk_file
   attr_accessor :invert_waveform
+  attr_accessor :count_periods
 attr_accessor :debug_bytes
 
   def initialize(filename, debuglevel = 0)
@@ -22,6 +23,7 @@ attr_accessor :debug_bytes
     @filename = filename
     @invert_waveform = false
     @bk_file = BkFile.new
+    @count_periods = :both
   end
 
   def debug(msg_level)
@@ -58,7 +60,7 @@ attr_accessor :debug_bytes
         current_cycle_state = (c < 0) ? :neg : :pos
 
         if current_cycle_state == previous_cycle_state then
-          cycle_length += 1
+          cycle_length += 1 if (@count_periods == :both) || (@count_periods == current_cycle_state)
         elsif (previous_cycle_state == :neg) && (current_cycle_state == :pos) then
           break if process_cycle(cycle_length)
           cycle_length = 1
@@ -83,7 +85,7 @@ attr_accessor :debug_bytes
 
       # If we read at least 200 pilot cycles by now and we encounter a cycle of length > 3.5 x '0',
       #    then it must be the end of the pilot.
-      if (len > (tpl / @pilot_cycles_counter * 3.5)) && (@pilot_cycles_counter > 200) then
+      if (len > (tpl / @pilot_cycles_counter * 3)) && (@pilot_cycles_counter > 200) then
         @length_of_0 = (tpl / @pilot_cycles_counter).round(1)
         @cutoff = Integer((@length_of_0 * CUTOFF_COEFF).round(0))
         @state = :pilot_found
@@ -213,8 +215,8 @@ puts @current_sample_pos if debug_bytes && debug_bytes.include?(@current_array.s
       @marker_state = :marker_body
     when :marker_body then
       if (@marker_counter > 2) && (len > @cutoff) then
-        if (len < (@length_of_0 * 3.5)) then
-          raise "Marker final cycle not found (@ #{@current_sample_pos}); cycle #{len} long, expecting at least #{(@length_of_0 * 3.5)} long" if !ignore_errors
+        if (len < (@length_of_0 * 3)) then
+          raise "Marker final cycle not found (@ #{@current_sample_pos}); cycle #{len} long, expecting at least #{(@length_of_0 * 3)} long" if !ignore_errors
         end
         @marker_state = :post_marker_1
       end
