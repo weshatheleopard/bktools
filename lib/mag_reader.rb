@@ -136,15 +136,14 @@ attr_accessor :debug_bytes
     if !ignore_length_errors && (sync_len > @cutoff) then
       array_position = ", byte ##{@current_array.size}" if @current_array
 
-      puts "Sync bit too long (#{sync_len}) @ #{current_sample_position}#{array_position}".red
-      raise
+      puts "WARNING:".red.bold + " sync bit too long (#{sync_len}) @ #{current_sample_position}#{array_position}".red
     end
 
     data_len = read_period  # Read data
     if !ignore_length_errors && (data_len > (@length_of_0 * BIT_TOO_LONG)) then
       array_position = ", byte ##{@current_array.size}" if @current_array
 
-      puts "Bit WAY too long (#{data_len}) @ #{current_sample_position}#{array_position}".red
+      puts "WARNING:".red.bold + " data bit too long (#{data_len}) @ #{current_sample_position}#{array_position}".red
     end
 
     data_len
@@ -183,7 +182,7 @@ attr_accessor :debug_bytes
       if pulse_len then
         if (pulse_len > (@cutoff * 2)) then
           # Not a marker. start over.
-          raise "Error finding file start marker"
+          raise "Phase detection: pulse too long @ #{current_sample_position}"
         else
           debug(20) { "Phase indicator pulse found, length = #{pulse_len}, #{@inv_phase ? 'inverse' : 'straight' } phase" }
           debug(15) { 'Phase detection successful'.green }
@@ -239,7 +238,7 @@ attr_accessor :debug_bytes
 
       if pulse_len > @cutoff then
         if pulse_len > (2 * @cutoff) then
-          raise "Error finding marker before data array"
+          raise "Error finding marker before data array @ #{current_sample_position}"
         end
 
         debug(20) { "Array marker detected @ #{current_sample_position}" }
@@ -276,6 +275,12 @@ attr_accessor :debug_bytes
 
     debug(5) { "Reading header..." }
     read_header
+
+
+    if (bk_file.name[13].ord == 38) && (bk_file.name[14].ord == 0) && (bk_file.name[15].ord == 1) then
+      debug(0) { "HELP7M files are presently not supported".yellow }
+      return
+    end
 
     debug(5) { "Reading data..." }
     read_bytes_with_marker(@bk_file.body, @bk_file.length)
