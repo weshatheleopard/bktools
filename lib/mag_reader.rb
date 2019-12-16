@@ -9,7 +9,7 @@ class MagReader
   include WaveformFixer
   include TapeSplitter
 
-  PILOT_LENGTH = 0o4000
+  PILOT_LENGTH = 0o2000  # ROM code has it at 0o4000, but in reality we can be less strict
   SPEEDTEST_LENGTH = 0o200
 
   CUTOFF_COEFF = 1.5   # Cycles longer than (base cycle length * CUTOFF_COEFF) will be
@@ -49,6 +49,10 @@ attr_accessor :debug_bytes
     return val
   end
 
+  def current_sample_position
+    @buffer_start + @buffer_idx
+  end
+
   def find_pilot
     val = -1
     count = 0
@@ -71,7 +75,7 @@ attr_accessor :debug_bytes
         prev_len = curr_len
         curr_len = 0
       else
-        debug(30) { "Pilot search failed @ #{@buffer_start + @buffer_idx}" }
+        debug(30) { "Pilot search failed @ #{current_sample_position}" }
         return false
       end
     end
@@ -87,7 +91,7 @@ attr_accessor :debug_bytes
     debug(10) { 'Starting speed test' }
 
     SPEEDTEST_LENGTH.times do
-      @total_speedtest_length += read_period_with_sync
+      @total_speedtest_length += read_period_with_sync(:ignore_length_errors)
     end
 
     debug(5) { 'Speed test complete'.green }
@@ -126,9 +130,24 @@ attr_accessor :debug_bytes
     len
   end
 
-  def read_period_with_sync  # same as PERIOD:
-    read_period  # Skip sync
-    read_period  # Read data
+  def read_period_with_sync(ignore_length_errors = false)  # same as PERIOD:
+    sync_len = read_period  # Skip sync
+
+    if !ignore_length_errors && (sync_len > @cutoff) then
+      array_position = ", byte ##{@current_array.size}" if @current_array
+
+      puts "Sync bit too long (#{sync_len}) @ #{current_sample_position}#{array_position}".red
+      raise
+    end
+
+    data_len = read_period  # Read data
+    if !ignore_length_errors && (data_len > (@length_of_0 * BIT_TOO_LONG)) then
+      array_position = ", byte ##{@current_array.size}" if @current_array
+
+      puts "Bit WAY too long (#{data_len}) @ #{current_sample_position}#{array_position}".red
+    end
+
+    data_len
   end
 
   def detect_phase
@@ -141,7 +160,7 @@ attr_accessor :debug_bytes
         pos_pulse_len += 1
       end
 
-      debug(30) { "Phase detection: positive pulse length = #{pos_pulse_len}, cutoff = #{@cutoff}  @ #{@buffer_start + @buffer_idx}" }
+      debug(30) { "Phase detection: positive pulse length = #{pos_pulse_len}, cutoff = #{@cutoff}  @ #{current_sample_position}" }
 
       if pos_pulse_len > @cutoff then
         @inv_phase = false
@@ -153,7 +172,7 @@ attr_accessor :debug_bytes
           neg_pulse_len += 1
         end
 
-        debug(30) { "Phase detection: negative pulse length = #{neg_pulse_len}, cutoff = #{@cutoff}  @ #{@buffer_start + @buffer_idx}" }
+        debug(30) { "Phase detection: negative pulse length = #{neg_pulse_len}, cutoff = #{@cutoff}  @ #{current_sample_position}" }
 
         if neg_pulse_len > @cutoff then
           @inv_phase = true
@@ -167,9 +186,9 @@ attr_accessor :debug_bytes
           raise "Error finding file start marker"
         else
           debug(20) { "Phase indicator pulse found, length = #{pulse_len}, #{@inv_phase ? 'inverse' : 'straight' } phase" }
-          debug(15) { 'Phase detection successful, starting speed test'.green }
+          debug(15) { 'Phase detection successful'.green }
 
-          read_period_with_sync # Skip sync "1"
+          read_period_with_sync(:ignore_length_errors)  # Skip sync bits
 
           return true
         end
@@ -182,7 +201,7 @@ attr_accessor :debug_bytes
 
     bit = (len > @cutoff)
 
-    debug(20) { "   data cycle @ #{@buffer_start + @buffer_idx}, length = #{len}, cutoff = #{@cutoff}, bit = #{bit ? 1 : 0}" }
+    debug(20) { "   data cycle @ #{current_sample_position}, length = #{len}, cutoff = #{@cutoff}, bit = #{bit ? 1 : 0}" }
 
     bit
   end
@@ -199,6 +218,9 @@ attr_accessor :debug_bytes
       debug(10) { "--- byte #{Tools::octal(i + 1).bold} of #{Tools::octal(len).bold} read: #{Tools::octal_byte(@byte).yellow.bold}" } #(#{@byte.chr})" }
 
       arr << @byte
+
+#puts current_sample_position if debug_bytes && debug_bytes.include?(@current_array.size)
+
     end
   end
 
@@ -220,9 +242,9 @@ attr_accessor :debug_bytes
           raise "Error finding marker before data array"
         end
 
-        debug(20) { "Array marker detected @ #{@buffer_start + @buffer_idx}" }
+        debug(20) { "Array marker detected @ #{current_sample_position}" }
 
-        read_period_with_sync # Skip sync "1"
+        read_period_with_sync(:ignore_length_errors) # Skip sync bits
         break
       end
     end
@@ -274,20 +296,5 @@ attr_accessor :debug_bytes
     debug(0) { "Read complete." }
   end
 
-
-
-=begin
-#puts @current_sample_pos if debug_bytes && debug_bytes.include?(@current_array.size)
-    if len > (@length_of_0 * BIT_TOO_LONG) then
-      puts "Bit WAY too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}".red
-      raise
-    end
-
-# if sync && bit == 1
-        puts "Sync bit too long (#{len}) @ #{@current_sample_pos}, byte ##{@current_array.size}".red
-
-debug(15) { "Processing block start marker: cycle ##{@marker_counter} @ #{@current_sample_pos}, imp_length=#{len}; lead_cycle_length=#{first_cycle}, expecting #{marker_body_length} cycles" }
-raise "Marker final cycle not found (@ #{@current_sample_pos}); cycle #{len} long, expecting at least #{(@length_of_0 * 3)} long" if !ignore_errors
-=end
-
 end
+
