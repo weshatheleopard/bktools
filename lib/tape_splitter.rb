@@ -21,7 +21,7 @@ module TapeSplitter
       buffer.samples.each { |c|
         @current_sample_pos += 1
 
-        if (c > 0) ^ @invert_waveform then
+        if (c > 0) then
           counter += 1
         else
           if counter != 0 then
@@ -43,7 +43,7 @@ module TapeSplitter
       @pilot_counter += 1
     else
       # Discrepancy too large. Let's see if it's an accident or an actual start marker.
-      if (@pilot_counter > 0o5000) && (len > (3 * @prev_len)) then  # So it is an actual start marker.
+      if (@pilot_counter > PILOT_LENGTH) && (len > (3 * @prev_len)) then  # So it is an actual start marker.
         debug(8) { "Pilot sequence detected at ##{@start_pos_candidate.to_s.bold}-#{@current_sample_pos.to_s.bold}" }
 
         @split_locations << @start_pos_candidate
@@ -82,7 +82,7 @@ module TapeSplitter
             writer.write(current_write_buffer)
           }
 
-          # Start collectiong a new file
+          # Start collecting a new file
           piece_start_location = position_in_file
           current_write_buffer = make_write_buffer()
         end
