@@ -1,7 +1,7 @@
 require 'wavefile'
 
 module WaveformFixer
-  MIN_CORRECTION = 5000
+  MIN_CORRECTION = 1000
 
   # This modiule contains experimental code for MagReader the is intended to repair files
   #   that were imperfectly read from the tape (with offset reading head, etc.)
@@ -15,7 +15,7 @@ module WaveformFixer
 
     reader = WaveFile::Reader.new(@filename, WaveFile::Format.new(:mono, :pcm_16, 44100))
     reader.each_buffer(1024*1024*1024) do |buffer|
-      debug 5, "Loaded #{buffer.samples.length.to_s.bold} samples"
+      debug(5) { "Loaded #{buffer.samples.length.to_s.bold} samples" }
       original_buffer = buffer
     end
 
@@ -87,7 +87,7 @@ module WaveformFixer
 
     dy = max_value - (amplitude / 2)  # Maximum ideally should be at (amplitude / 2)
 
-    debug 40, "Adjusting centerline by #{dy} from #{max_position} to #{min_position}".red
+    debug(40) { "Adjusting centerline by #{dy} from #{max_position} to #{min_position}".red }
     max_position.upto(min_position) { |pos| offset_buffer.samples[pos] = dy }
   end
 
