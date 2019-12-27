@@ -85,14 +85,7 @@ class BkFile
   end
 
   def compute_checksum
-    cksum = 0
-    body.each { |byte|
-      cksum += byte
-      if cksum > 0o177777 then
-        cksum = cksum - 0o200000 + 1 # 16-bit cutoff + ADC
-      end
-    }
-    cksum
+    Tools::checksum(body)
   end
 
   def validate_checksum

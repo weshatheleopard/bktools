@@ -1,6 +1,7 @@
 require 'wavefile'
 require 'waveform_fixer'
 require 'tape_splitter'
+require 'help7'
 
 require 'term/ansicolor'
 include Term::ANSIColor
@@ -8,6 +9,7 @@ include Term::ANSIColor
 class MagReader
   include WaveformFixer
   include TapeSplitter
+  include Help7
 
   PILOT_LENGTH = 0o2000  # ROM code has it at 0o4000, but in reality we can be less strict
   SPEEDTEST_LENGTH = 0o200
@@ -109,20 +111,30 @@ attr_accessor :debug_bytes
   def read_period
     len = 0
 
+    val = read_sample
+
     if @inv_phase then
-      while(read_sample < 0) do
+      loop do
+        val = read_sample
+        break if val >= 0
         len += 1
       end
 
-      while(read_sample >= 0) do
+      loop do
+        val = read_sample
+        break if val < 0
         len += 1
       end
     else
-      while(read_sample >= 0) do
+      loop do
+        val = read_sample
+        break if val < 0
         len += 1
       end
 
-      while(read_sample < 0) do
+      loop do
+        val = read_sample
+        break if val >= 0
         len += 1
       end
     end
@@ -136,14 +148,14 @@ attr_accessor :debug_bytes
     if !ignore_length_errors && (sync_len > @cutoff) then
       array_position = ", byte ##{@current_array.size}" if @current_array
 
-      puts "WARNING:".red.bold + " sync bit too long (#{sync_len}) @ #{current_sample_position}#{array_position}".red
+      puts "WARNING:".bold + " sync bit too long (#{sync_len}) @ #{current_sample_position}#{array_position}".red
     end
 
     data_len = read_period  # Read data
     if !ignore_length_errors && (data_len > (@length_of_0 * BIT_TOO_LONG)) then
       array_position = ", byte ##{@current_array.size}" if @current_array
 
-      puts "WARNING:".red.bold + " data bit too long (#{data_len}) @ #{current_sample_position}#{array_position}".red
+      puts "WARNING:".bold + " data bit too long (#{data_len}) @ #{current_sample_position}#{array_position}".red
     end
 
     data_len
@@ -238,10 +250,10 @@ attr_accessor :debug_bytes
 
       if pulse_len > @cutoff then
         if pulse_len > (2 * @cutoff) then
-          raise "Error finding marker before data array @ #{current_sample_position}"
+          raise "Marker too long before data array @ #{current_sample_position}"
         end
 
-        debug(20) { "Array marker detected @ #{current_sample_position}" }
+        debug(20) { "Data array marker detected @ #{current_sample_position}" }
 
         read_period_with_sync(:ignore_length_errors) # Skip sync bits
         break
@@ -276,9 +288,13 @@ attr_accessor :debug_bytes
     debug(5) { "Reading header..." }
     read_header
 
+    if (bk_file.name[13].ord == 38) then
+      @block_length = Tools::bytes2word(bk_file.name.bytes[14], bk_file.name.bytes[15])
+      debug(10) { "HELP7M block length = #{Tools::octal(@block_length)}".yellow }
+      debug(0)  { "Proceeding to read HELP7M file".yellow }
+return
+      read_help7_body
 
-    if (bk_file.name[13].ord == 38) && (bk_file.name[14].ord == 0) && (bk_file.name[15].ord == 1) then
-      debug(0) { "HELP7M files are presently not supported".yellow }
       return
     end
 
@@ -302,4 +318,3 @@ attr_accessor :debug_bytes
   end
 
 end
-

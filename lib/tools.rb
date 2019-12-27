@@ -41,4 +41,16 @@ module Tools
     str.to_i(8)
   end
 
+  def self.adc(val)
+    if val > 0o177777 then
+      val = val - 0o200000 + 1 # 16-bit cutoff + ADC
+    else
+      val
+    end
+  end
+
+  def self.checksum(arr)
+    arr.inject(0) { |cksum, byte| Tools::adc(cksum + byte) }
+  end
+
 end
