@@ -28,8 +28,8 @@ puts "--------------entering MRKR @ #{current_sample_position}"
       if pre_marker then
         read_period # Skip a period
         len = read_period
-puts "===> looking for LONG marker @ #{current_sample_position}, len=#{len}, need > #{4.5 * @length_of_0} < #{8 * @length_of_0} "
-        if (len > 4.5 * @length_of_0) && (len < 8 * @length_of_0) then  # The code says 7.5 not 8 but OK for now
+puts "===> looking for LONG marker @ #{current_sample_position}, len=#{len}, need > #{@cutoff3} and < #{@marker_cutoff} "
+        if (len > 4.5 * @length_of_0) && (len < @marker_cutoff) then  # The code says 7.5 but tapes beg to differ
           puts "MRKR: found LONG marker @ #{current_sample_position}"
           break
         else
@@ -66,6 +66,17 @@ puts "--------------leaving MRKR @ #{current_sample_position}"
     read_bytes_without_marker(arr, arr_len)
   end
 
+  def compute_cutoffs
+    @cutoff  = @total_speedtest_length * 1.5
+    @cutoff2 = @total_speedtest_length * 3.0
+    @cutoff3 = @total_speedtest_length * 5
+
+    @marker_cutoff = (((@cutoff2 + @cutoff3) / MagReader::SPEEDTEST_LENGTH) + 8).to_i
+    @cutoff  = (@cutoff  / MagReader::SPEEDTEST_LENGTH).to_i + 3
+    @cutoff2 = (@cutoff2 / MagReader::SPEEDTEST_LENGTH).to_i + 3
+    @cutoff3 = (@cutoff3 / MagReader::SPEEDTEST_LENGTH).to_i + 3
+  end
+
   def read_help7_body
     @help7_checksum_array = []
 
@@ -75,8 +86,7 @@ puts "--------------leaving MRKR @ #{current_sample_position}"
     debug(5) { "Checksum read successfully".green }
     debug(7) { ' * '.blue.bold + "File checksum     : #{Tools::octal(@bk_file.checksum).bold}" }
 
-    @cutoff2 = @length_of_0 * 2.5 + 2
-    @cutoff3 = @length_of_0 * 3.5 + 2
+    compute_cutoffs
 
     read_block_marker
 
@@ -166,6 +176,7 @@ puts "--------------leaving MRKR @ #{current_sample_position}"
     computed_block_checksum = Tools::checksum(block) + @bk_file.checksum
 
     debug(7) { ' * '.blue.bold + "Computed block checksum : #{Tools::octal(computed_block_checksum).bold}" }
+    debug(7) { ' * '.blue.bold + "Read block checksum     : #{Tools::octal(block_checksum).bold}" }
 
     debug(5) { "Verifying block checksum: #{(computed_block_checksum == block_checksum) ? 'success'.green : 'failed'.red }" }
 

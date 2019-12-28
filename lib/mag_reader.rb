@@ -98,7 +98,8 @@ attr_accessor :debug_bytes
 
     debug(5) { 'Speed test complete'.green }
 
-    @length_of_0 = @total_speedtest_length / SPEEDTEST_LENGTH
+    @length_of_0 = (@total_speedtest_length.to_f / SPEEDTEST_LENGTH).round(0)
+
     debug(15) { ' * '.blue.bold + "Cycles counted        : #{SPEEDTEST_LENGTH.to_s.bold}" }
     debug(15) { ' * '.blue.bold + "Total length          : #{@total_speedtest_length.to_s.bold}" }
 
@@ -292,7 +293,7 @@ attr_accessor :debug_bytes
       @block_length = Tools::bytes2word(bk_file.name.bytes[14], bk_file.name.bytes[15])
       debug(10) { "HELP7M block length = #{Tools::octal(@block_length)}".yellow }
       debug(0)  { "Proceeding to read HELP7M file".yellow }
-return
+
       read_help7_body
 
       return
