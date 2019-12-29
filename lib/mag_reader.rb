@@ -290,11 +290,9 @@ attr_accessor :debug_bytes
     read_header
 
     if (bk_file.name[13].ord == 38) then
-      @block_length = Tools::bytes2word(bk_file.name.bytes[14], bk_file.name.bytes[15])
-      debug(10) { "HELP7M block length = #{Tools::octal(@block_length)}".yellow }
-      debug(0)  { "Proceeding to read HELP7M file".yellow }
+      debug(0)  { "HELP7M file detected, proceeding to read".yellow }
 
-      read_help7_body
+      read_help7_body(Tools::bytes2word(bk_file.name.bytes[14], bk_file.name.bytes[15]))
 
       return
     end

@@ -1,5 +1,6 @@
-module Help7
+require 'help7_block'
 
+module Help7
   def read_semiperiod
     len = 0
 
@@ -26,10 +27,13 @@ module Help7
     loop do
       if pre_marker then
         read_period # Skip a period
+
         len = read_period
-puts "===> looking for LONG marker @ #{current_sample_position}, len=#{len}, need > #{@cutoff3} and < #{@marker_cutoff} "
-        if (len > 4.5 * @length_of_0) #&& (len < @marker_cutoff) then  # The code says 7.5 but tapes beg to differ
-          puts "MRKR: found LONG marker @ #{current_sample_position}"
+
+        debug(30) { "Looking for LONG marker @ #{current_sample_position}, len=#{len}, need > #{@cutoff3} and < #{@marker_cutoff}" }
+
+        if (len > @cutoff3) && (len < @marker_cutoff) then
+          debug(30) { "--- Found LONG marker @".green + current_sample_position.to_s.bold }
           break
         else
           pre_marker = false
@@ -37,7 +41,7 @@ puts "===> looking for LONG marker @ #{current_sample_position}, len=#{len}, nee
       else
         len = read_period
         if (len > @cutoff) && (len <= 2 * @cutoff) then
-          puts "MRKR: found short marker @ #{current_sample_position}"
+          debug(30) { "--- Found short marker @".green + current_sample_position.to_s.bold }
           pre_marker = true
         end
       end
@@ -69,13 +73,15 @@ puts "===> looking for LONG marker @ #{current_sample_position}, len=#{len}, nee
     @cutoff2 = @total_speedtest_length * 3.0
     @cutoff3 = @total_speedtest_length * 4.5
 
-    @marker_cutoff = (((@cutoff2 + @cutoff3) / MagReader::SPEEDTEST_LENGTH) + 8).to_i + 2
-    @cutoff  = (@cutoff  / MagReader::SPEEDTEST_LENGTH).to_i + 2
-    @cutoff2 = (@cutoff2 / MagReader::SPEEDTEST_LENGTH).to_i + 2
-    @cutoff3 = (@cutoff3 / MagReader::SPEEDTEST_LENGTH).to_i + 2
+    @marker_cutoff = (((@cutoff2 + @cutoff3) / MagReader::SPEEDTEST_LENGTH) + 8).to_i + 3
+    @cutoff  = (@cutoff  / MagReader::SPEEDTEST_LENGTH).to_i + 3
+    @cutoff2 = (@cutoff2 / MagReader::SPEEDTEST_LENGTH).to_i + 3
+    @cutoff3 = (@cutoff3 / MagReader::SPEEDTEST_LENGTH).to_i + 3
   end
 
-  def read_help7_body
+  def read_help7_body(block_length)
+    debug(7) { ' * '.blue.bold + "HELP7M block length = #{Tools::octal(block_length)}".yellow }
+
     @help7_checksum_array = []
 
     read_block_header(@help7_checksum_array, 2)
@@ -86,20 +92,39 @@ puts "===> looking for LONG marker @ #{current_sample_position}, len=#{len}, nee
 
     compute_cutoffs
 
-    read_help7_block
+    bytes_remaining = @bk_file.length
 
+    loop do
+      current_block = Help7Block.new
+
+      current_block.length = [ block_length, bytes_remaining ].min
+
+      if block = read_help7_block(current_block) then
+        block_address = (block.number - 1) * block_length
+
+        block.length.times do |i|
+          @bk_file.body[block_address + i] = block.body[i]
+        end
+
+        bytes_remaining -= block.length
+      end
+
+      if bytes_remaining == 0 then
+        debug(0) { "Verifying checksum: #{@bk_file.validate_checksum ? 'success'.green : 'failed'.red }" }
+        break
+      end
+    end
   end
 
-
-  def read_help7_block
-    @block_header_array = []
+  def read_help7_block(current_block)
+    block_header_array = []
 
     read_block_marker
 
-    read_block_header(@block_header_array, 4)
+    read_block_header(block_header_array, 4)
 
     # The byte encodes which 2 bits pulse of a particular length
-    this_block_nibbles = @block_header_array[0]  #  encodes in this block
+    this_block_nibbles = block_header_array[0]  #  encodes in this block
 
     # Nibbles correspond to periods measured in length of a period of the pilot tone:
 
@@ -113,36 +138,34 @@ puts "===> looking for LONG marker @ #{current_sample_position}, len=#{len}, nee
     #       |+---------       > 3.5 of sync tone period, most significant bit
     #       +----------       > 3.5 of sync tone period, least significant bit
 
-    block_checksum = Tools::bytes2word(@block_header_array[2], @block_header_array[3])
+    current_block.owner_file_checksum = @bk_file.checksum
+    current_block.checksum = Tools::bytes2word(block_header_array[2], block_header_array[3])
+    current_block.number = block_header_array[1] # 1-based
 
     debug(10) { "Block header read successfully".green }
     debug(15) { ' * '.blue.bold + "Pulse length to nibbles mapping : " + this_block_nibbles.to_s(2).bold }
-    debug(15) { ' * '.blue.bold + "Block number                    : " + Tools::octal(@block_header_array[1]).bold }
-    debug(15) { ' * '.blue.bold + "Block checksum                  : " + Tools::octal(block_checksum).bold }
-
-    @current_block_length = @block_length  # This is not true for the last block, but we'll fix that later
+    debug(15) { ' * '.blue.bold + "Block number                    : " + Tools::octal(current_block.number).bold }
+    debug(15) { ' * '.blue.bold + "Block checksum                  : " + Tools::octal(current_block.checksum).bold }
 
     loop do # Find block data start marker
+
       len = read_semiperiod
 
-#      puts "#{len} @ #{current_sample_position}"
-       if (len > @cutoff) && (len < (2 * @cutoff)) then  # Marker found!
+      if (len > @cutoff) && (len < (2 * @cutoff)) then  # Marker found!
         break
       else
-        # TODO: return to the block search loop
+        # TODO: resume block search
       end
     end
 
-    debug(10) { "Block data header found" }
+    debug(10) { "Found block data header found" }
 
     read_period_with_sync
     read_period
 
     byte = 0
 
-    block = []
-
-    @current_block_length.times { |i|
+    current_block.length.times { |i|
       byte = 0
       debug(30) { '   ' + '-' * (@cutoff.to_i - 1) + '|' + '-' * (@cutoff2 - @cutoff - 1).to_i + '|' + '-' * (@cutoff3 - @cutoff2 - 1).to_i + '|' + '-----------------' }
 
@@ -170,19 +193,23 @@ puts "===> looking for LONG marker @ #{current_sample_position}, len=#{len}, nee
         byte = byte | 0200 if (nibble & 1) != 0
       end
 
-      debug(10) { "--- byte #{Tools::octal(i + 1).bold} of #{Tools::octal(@current_block_length).bold} read: #{Tools::octal_byte(byte).yellow.bold}" } #(#{@byte.chr})" }
+      debug(10) { "--- byte #{Tools::octal(i + 1).bold} of #{Tools::octal(current_block.length).bold} read: #{Tools::octal_byte(byte).yellow.bold}" } #(#{@byte.chr})" }
 
-      block << byte
+      current_block.body << byte
     }
 
     debug(20) { "End of block @ #{current_sample_position}" }
 
-    computed_block_checksum = Tools::checksum(block) + @bk_file.checksum
+    debug(7) { ' * '.blue.bold + "Computed block checksum : #{Tools::octal(current_block.compute_checksum + current_block.owner_file_checksum).bold}" }
+    debug(7) { ' * '.blue.bold + "Read block checksum     : #{Tools::octal(current_block.checksum).bold}" }
 
-    debug(7) { ' * '.blue.bold + "Computed block checksum : #{Tools::octal(computed_block_checksum).bold}" }
-    debug(7) { ' * '.blue.bold + "Read block checksum     : #{Tools::octal(block_checksum).bold}" }
+    debug(5) { "Verifying block checksum: #{current_block.validate_checksum ? 'success'.green : 'failed'.red }" }
 
-    debug(5) { "Verifying block checksum: #{(computed_block_checksum == block_checksum) ? 'success'.green : 'failed'.red }" }
+    if current_block.validate_checksum then
+      return current_block
+    else
+      return nil
+    end
   end
 
 end
