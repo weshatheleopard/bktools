@@ -1,10 +1,10 @@
 require 'help7_block'
 
 module Help7
-  def read_semiperiod
+  def read_semiperiod(phase = @inv_phase)
     len = 0
 
-    if @inv_phase then
+    if phase then
       loop do
         val = read_sample
         break if val >= 0
@@ -21,10 +21,10 @@ module Help7
     len
   end
 
-  def read_block_marker
+  def find_block_marker
     pre_marker = false
 
-    loop do
+    loop {
       if pre_marker then
         read_period # Skip a period
 
@@ -45,7 +45,7 @@ module Help7
           pre_marker = true
         end
       end
-    end
+    }
   end
 
   def read_block_header(arr, arr_len)
@@ -53,17 +53,15 @@ module Help7
       len = read_semiperiod # Note we are reading SEMIperiod here
 
       if (len > @cutoff) && (len < 2 * @cutoff) then
-
         # Pilot bits are done
         debug(10) { "Block header marker found @".green + current_sample_position.to_s.bold }
 
-# Prolly need to skip the rest of semiperiod here
-
+        read_semiperiod(!@inv_phase) # Skip the rest of period
         break
       end
     end
-    read_period_with_sync # Skip sync
-#!!! NOTE: when I fix the semiperiod above, need to change this to jst "read_period"
+
+    read_period  # Skip period
 
     read_bytes_without_marker(arr, arr_len)
   end
@@ -93,8 +91,11 @@ module Help7
     compute_cutoffs
 
     bytes_remaining = @bk_file.length
+    read_blocks = Array.new(((@bk_file.length - 1).divmod(block_length).first + 1))
 
-    loop do
+    loop {
+      find_block_marker
+
       current_block = Help7Block.new
 
       current_block.length = [ block_length, bytes_remaining ].min
@@ -102,24 +103,32 @@ module Help7
       if block = read_help7_block(current_block) then
         block_address = (block.number - 1) * block_length
 
-        block.length.times do |i|
-          @bk_file.body[block_address + i] = block.body[i]
+        if read_blocks[block.number - 1] != true then
+          block.length.times { |i|
+            @bk_file.body[block_address + i] = block.body[i]
+          }
+
+          bytes_remaining -= block.length
+          read_blocks[block.number - 1] = true
+
+          debug(7) { "Blocks remaining to read: " + read_blocks.collect { |f| f ? '+' : '-' }.join }
+          debug(7) { "Bytes remaining to read:  " + bytes_remaining.to_s.bold }
+
+        else 
+          debug(7) { "Block already read. Bytes remaining to read: " + bytes_remaining.to_s.bold }
         end
 
-        bytes_remaining -= block.length
-      end
+        if bytes_remaining == 0 then
+          debug(0) { "Verifying file checksum: #{@bk_file.validate_checksum ? 'success'.green : 'failed'.red }" }
+          break
+        end
 
-      if bytes_remaining == 0 then
-        debug(0) { "Verifying checksum: #{@bk_file.validate_checksum ? 'success'.green : 'failed'.red }" }
-        break
       end
-    end
+    }
   end
 
   def read_help7_block(current_block)
     block_header_array = []
-
-    read_block_marker
 
     read_block_header(block_header_array, 4)
 
@@ -144,12 +153,13 @@ module Help7
 
     debug(10) { "Block header read successfully".green }
     debug(15) { ' * '.blue.bold + "Pulse length to nibbles mapping : " + this_block_nibbles.to_s(2).bold }
-    debug(15) { ' * '.blue.bold + "Block number                    : " + Tools::octal(current_block.number).bold }
+    debug(15) { ' * '.blue.bold + "Block number                    : " + current_block.number.to_s.bold }
     debug(15) { ' * '.blue.bold + "Block checksum                  : " + Tools::octal(current_block.checksum).bold }
 
     loop do # Find block data start marker
 
       len = read_semiperiod
+      read_semiperiod(!@inv_phase)
 
       if (len > @cutoff) && (len < (2 * @cutoff)) then  # Marker found!
         break
@@ -158,9 +168,9 @@ module Help7
       end
     end
 
-    debug(10) { "Found block data header found" }
+    debug(10) { "Found block data header" }
 
-    read_period_with_sync
+    read_period
     read_period
 
     byte = 0
@@ -203,7 +213,7 @@ module Help7
     debug(7) { ' * '.blue.bold + "Computed block checksum : #{Tools::octal(current_block.compute_checksum + current_block.owner_file_checksum).bold}" }
     debug(7) { ' * '.blue.bold + "Read block checksum     : #{Tools::octal(current_block.checksum).bold}" }
 
-    debug(5) { "Verifying block checksum: #{current_block.validate_checksum ? 'success'.green : 'failed'.red }" }
+    debug(5) { "Verifying block #{current_block.number} checksum: #{current_block.validate_checksum ? 'success'.green : 'failed'.red }" }
 
     if current_block.validate_checksum then
       return current_block
