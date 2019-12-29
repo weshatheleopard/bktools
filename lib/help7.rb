@@ -21,7 +21,6 @@ module Help7
   end
 
   def read_block_marker
-puts "--------------entering MRKR @ #{current_sample_position}"
     pre_marker = false
 
     loop do
@@ -29,7 +28,7 @@ puts "--------------entering MRKR @ #{current_sample_position}"
         read_period # Skip a period
         len = read_period
 puts "===> looking for LONG marker @ #{current_sample_position}, len=#{len}, need > #{@cutoff3} and < #{@marker_cutoff} "
-        if (len > 4.5 * @length_of_0) && (len < @marker_cutoff) then  # The code says 7.5 but tapes beg to differ
+        if (len > 4.5 * @length_of_0) #&& (len < @marker_cutoff) then  # The code says 7.5 but tapes beg to differ
           puts "MRKR: found LONG marker @ #{current_sample_position}"
           break
         else
@@ -43,7 +42,6 @@ puts "===> looking for LONG marker @ #{current_sample_position}, len=#{len}, nee
         end
       end
     end
-puts "--------------leaving MRKR @ #{current_sample_position}"
   end
 
   def read_block_header(arr, arr_len)
@@ -69,18 +67,18 @@ puts "--------------leaving MRKR @ #{current_sample_position}"
   def compute_cutoffs
     @cutoff  = @total_speedtest_length * 1.5
     @cutoff2 = @total_speedtest_length * 3.0
-    @cutoff3 = @total_speedtest_length * 5
+    @cutoff3 = @total_speedtest_length * 4.5
 
-    @marker_cutoff = (((@cutoff2 + @cutoff3) / MagReader::SPEEDTEST_LENGTH) + 8).to_i
-    @cutoff  = (@cutoff  / MagReader::SPEEDTEST_LENGTH).to_i + 3
-    @cutoff2 = (@cutoff2 / MagReader::SPEEDTEST_LENGTH).to_i + 3
-    @cutoff3 = (@cutoff3 / MagReader::SPEEDTEST_LENGTH).to_i + 3
+    @marker_cutoff = (((@cutoff2 + @cutoff3) / MagReader::SPEEDTEST_LENGTH) + 8).to_i + 2
+    @cutoff  = (@cutoff  / MagReader::SPEEDTEST_LENGTH).to_i + 2
+    @cutoff2 = (@cutoff2 / MagReader::SPEEDTEST_LENGTH).to_i + 2
+    @cutoff3 = (@cutoff3 / MagReader::SPEEDTEST_LENGTH).to_i + 2
   end
 
   def read_help7_body
     @help7_checksum_array = []
 
-    read_block_header(@help7_checksum_array, 2)    
+    read_block_header(@help7_checksum_array, 2)
 
     @bk_file.checksum = Tools::bytes2word(*@help7_checksum_array)
     debug(5) { "Checksum read successfully".green }
@@ -88,21 +86,29 @@ puts "--------------leaving MRKR @ #{current_sample_position}"
 
     compute_cutoffs
 
+    read_help7_block
+
+  end
+
+
+  def read_help7_block
+    @block_header_array = []
+
     read_block_marker
 
-# -----search for block
-    @block_header_array = []
     read_block_header(@block_header_array, 4)
 
-    this_block_nibbles = @block_header_array[0] # The byte encodes which 2 bits a particular length pulse encodes in this block
-    # Nibbles correspond to periods measured in length of period of sync tone: 
+    # The byte encodes which 2 bits pulse of a particular length
+    this_block_nibbles = @block_header_array[0]  #  encodes in this block
+
+    # Nibbles correspond to periods measured in length of a period of the pilot tone:
 
     # byte: 76543210
     #       |||||||+---       < 1.5 of sync tone period, most significant bit
     #       ||||||+----       < 1.5 of sync tone period, least significant bit
-    #       |||||+----- 1.5 ... 2.5 of sync tone period, most significant bit 
+    #       |||||+----- 1.5 ... 2.5 of sync tone period, most significant bit
     #       ||||+------ 1.5 ... 2.5 of sync tone period, least significant bit
-    #       |||+------- 2.5 ... 3.5 of sync tone period, most significant bit 
+    #       |||+------- 2.5 ... 3.5 of sync tone period, most significant bit
     #       ||+-------- 2.5 ... 3.5 of sync tone period, least significant bit
     #       |+---------       > 3.5 of sync tone period, most significant bit
     #       +----------       > 3.5 of sync tone period, least significant bit
@@ -118,8 +124,8 @@ puts "--------------leaving MRKR @ #{current_sample_position}"
 
     loop do # Find block data start marker
       len = read_semiperiod
-      
-      puts "#{len} @ #{current_sample_position}"
+
+#      puts "#{len} @ #{current_sample_position}"
        if (len > @cutoff) && (len < (2 * @cutoff)) then  # Marker found!
         break
       else
@@ -135,28 +141,26 @@ puts "--------------leaving MRKR @ #{current_sample_position}"
     byte = 0
 
     block = []
-    
-    @current_block_length.times { |byte_no|
+
+    @current_block_length.times { |i|
       byte = 0
-      debug(30) { "0----|%4.1f|--1--|%4.1f|--2--|%4.1f|----3" % [@cutoff, @cutoff2, @cutoff3] }
+      debug(30) { '   ' + '-' * (@cutoff.to_i - 1) + '|' + '-' * (@cutoff2 - @cutoff - 1).to_i + '|' + '-' * (@cutoff3 - @cutoff2 - 1).to_i + '|' + '-----------------' }
 
       # Read a byte
       4.times do
         len = read_period
 
-        case 
-        when len < @cutoff then
+        debug(30) { ("%3d" % [ len ] ) + ('=' * len) }
+
+        case
+        when len <= @cutoff then
           nibble = this_block_nibbles & 3
-          debug(30) { "^                                      (#{len} @ #{current_sample_position})" }
-        when len < @cutoff2 then
+        when len <= @cutoff2 then
           nibble = (this_block_nibbles & 014) >> 2
-          debug(30) { "             ^                         (#{len} @ #{current_sample_position})" }
-        when len < @cutoff3 then
+        when len <= @cutoff3 then
           nibble = (this_block_nibbles & 060) >> 4
-          debug(30) { "                        ^              (#{len} @ #{current_sample_position})" }
         else
           nibble = (this_block_nibbles & 0300) >> 6
-          debug(30) { "                                     ^ (#{len} @ #{current_sample_position})" }
         end
 
         byte = byte >> 1
@@ -166,12 +170,12 @@ puts "--------------leaving MRKR @ #{current_sample_position}"
         byte = byte | 0200 if (nibble & 1) != 0
       end
 
-      debug(15) { "Byte read: #{Tools::octal(byte).to_s.bold}" }
+      debug(10) { "--- byte #{Tools::octal(i + 1).bold} of #{Tools::octal(@current_block_length).bold} read: #{Tools::octal_byte(byte).yellow.bold}" } #(#{@byte.chr})" }
 
       block << byte
     }
 
-    puts "end of bytes in block @ #{current_sample_position}"
+    debug(20) { "End of block @ #{current_sample_position}" }
 
     computed_block_checksum = Tools::checksum(block) + @bk_file.checksum
 
@@ -179,9 +183,6 @@ puts "--------------leaving MRKR @ #{current_sample_position}"
     debug(7) { ' * '.blue.bold + "Read block checksum     : #{Tools::octal(block_checksum).bold}" }
 
     debug(5) { "Verifying block checksum: #{(computed_block_checksum == block_checksum) ? 'success'.green : 'failed'.red }" }
-
-    return
-
   end
 
 end
