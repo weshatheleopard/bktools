@@ -15,6 +15,6 @@ class Help7Block
   end
 
   def validate_checksum
-    checksum == (owner_file_checksum + compute_checksum)
+    checksum == Tools::adc(owner_file_checksum + compute_checksum)
   end
 end

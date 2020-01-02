@@ -78,7 +78,8 @@ module Help7
   end
 
   def read_help7_body(block_length)
-    debug(7) { ' * '.blue.bold + "HELP7M block length = #{Tools::octal(block_length)}".yellow }
+    @block_length = block_length
+    debug(7) { ' * '.blue.bold + "HELP7M block length = #{Tools::octal(@block_length)}".yellow }
 
     @help7_checksum_array = []
 
@@ -91,17 +92,16 @@ module Help7
     compute_cutoffs
 
     bytes_remaining = @bk_file.length
-    read_blocks = Array.new(((@bk_file.length - 1).divmod(block_length).first + 1))
+    @num_of_blocks = ((@bk_file.length - 1).divmod(@block_length).first + 1)
+    read_blocks = Array.new(@num_of_blocks)
 
     loop {
       find_block_marker
 
       current_block = Help7Block.new
 
-      current_block.length = [ block_length, bytes_remaining ].min
-
       if block = read_help7_block(current_block) then
-        block_address = (block.number - 1) * block_length
+        block_address = (block.number - 1) * @block_length
 
         if read_blocks[block.number - 1] != true then
           block.length.times { |i|
@@ -113,7 +113,6 @@ module Help7
 
           debug(7) { "Blocks remaining to read: " + read_blocks.collect { |f| f ? '+' : '-' }.join }
           debug(7) { "Bytes remaining to read:  " + bytes_remaining.to_s.bold }
-
         else 
           debug(7) { "Block already read. Bytes remaining to read: " + bytes_remaining.to_s.bold }
         end
@@ -150,6 +149,11 @@ module Help7
     current_block.owner_file_checksum = @bk_file.checksum
     current_block.checksum = Tools::bytes2word(block_header_array[2], block_header_array[3])
     current_block.number = block_header_array[1] # 1-based
+
+    current_block.length =
+      if current_block.number == @num_of_blocks then @bk_file.length - (@num_of_blocks * @block_length) + @block_length
+      else @block_length
+      end
 
     debug(10) { "Block header read successfully".green }
     debug(15) { ' * '.blue.bold + "Pulse length to nibbles mapping : " + this_block_nibbles.to_s(2).bold }

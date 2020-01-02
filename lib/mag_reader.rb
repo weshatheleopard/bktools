@@ -110,7 +110,7 @@ attr_accessor :debug_bytes
   end
 
   def read_period
-    len = 0
+    len1 = len2 = 0
 
     val = read_sample
 
@@ -118,29 +118,29 @@ attr_accessor :debug_bytes
       loop do
         val = read_sample
         break if val >= 0
-        len += 1
+        len1 += 1
       end
 
       loop do
         val = read_sample
         break if val < 0
-        len += 1
+        len2 += 1
       end
     else
       loop do
         val = read_sample
         break if val < 0
-        len += 1
+        len1 += 1
       end
 
       loop do
         val = read_sample
         break if val >= 0
-        len += 1
+        len2 += 1
       end
     end
 
-    len
+    (len1 + len2)
   end
 
   def read_period_with_sync(ignore_length_errors = false)  # same as PERIOD:
