@@ -83,7 +83,6 @@ This format was supported by a number of application programs. It splits the fil
 
 File header completely matched the standard file header, which allowed the file names to be displayed just fine when reviewing the tape.
 
-```
 File name:
 ```
 {
@@ -116,7 +115,6 @@ File sequence:
   * block sequence (as needed)
 }
 ```
-
 
 
 ## Reading data from a WAV file
