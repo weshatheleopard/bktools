@@ -111,7 +111,7 @@ module Help7
           bytes_remaining -= block.length
           read_blocks[block.number - 1] = true
 
-          debug(7) { "Blocks remaining to read: " + read_blocks.collect { |f| f ? '+' : '-' }.join }
+          debug(6) { "Blocks remaining to read: " + read_blocks.collect { |f| f ? '+'.green : '-'.red }.join }
           debug(7) { "Bytes remaining to read:  " + bytes_remaining.to_s.bold }
         else 
           debug(7) { "Block already read. Bytes remaining to read: " + bytes_remaining.to_s.bold }
@@ -207,7 +207,7 @@ module Help7
         byte = byte | 0200 if (nibble & 1) != 0
       end
 
-      debug(10) { "--- byte #{Tools::octal(i + 1).bold} of #{Tools::octal(current_block.length).bold} read: #{Tools::octal_byte(byte).yellow.bold}" } #(#{@byte.chr})" }
+      debug(14) { "--- byte #{Tools::octal(i + 1).bold} of #{Tools::octal(current_block.length).bold} read: #{Tools::octal_byte(byte).yellow.bold}" } #(#{@byte.chr})" }
 
       current_block.body << byte
     }
