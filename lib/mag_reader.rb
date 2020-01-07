@@ -239,7 +239,7 @@ attr_accessor :debug_bytes
   def read_bytes_with_marker(arr, len)
     loop do
       pulse_len = 0
-      if @inv_pase then
+      if @inv_phase then
         while(read_sample < 0) do
           pulse_len += 1
         end
