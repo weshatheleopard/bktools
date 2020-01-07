@@ -149,14 +149,14 @@ attr_accessor :debug_bytes
     if !ignore_length_errors && (sync_len > @cutoff) then
       array_position = ", byte ##{@current_array.size}" if @current_array
 
-      puts "WARNING:".bold + " sync bit too long (#{sync_len}) @ #{current_sample_position}#{array_position}".red
+      debug(1) { "WARNING:".bold + " sync bit too long (#{sync_len}) @ #{current_sample_position}#{array_position}".red }
     end
 
     data_len = read_period  # Read data
     if !ignore_length_errors && (data_len > (@length_of_0 * BIT_TOO_LONG)) then
       array_position = ", byte ##{@current_array.size}" if @current_array
 
-      puts "WARNING:".bold + " data bit too long (#{data_len}) @ #{current_sample_position}#{array_position}".red
+      debug(1) { puts "WARNING:".bold + " data bit too long (#{data_len}) @ #{current_sample_position}#{array_position}".red }
     end
 
     data_len
@@ -290,7 +290,7 @@ attr_accessor :debug_bytes
     read_header
 
     if (bk_file.name[13].ord == 38) then
-      debug(0)  { "HELP7M file detected, proceeding to read".yellow }
+      debug(2)  { "HELP7M file detected, proceeding to read".yellow }
 
       read_help7_body(Tools::bytes2word(bk_file.name.bytes[14], bk_file.name.bytes[15]))
 
