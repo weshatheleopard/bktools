@@ -68,11 +68,13 @@ module Help7
 
   def compute_cutoffs
     @cutoff  = @total_speedtest_length * 1.5
+    @cutoff1 = @total_speedtest_length * 1.5
     @cutoff2 = @total_speedtest_length * 3.0
     @cutoff3 = @total_speedtest_length * 4.5
 
     @marker_cutoff = (((@cutoff2 + @cutoff3) / MagReader::SPEEDTEST_LENGTH) + 8).to_i + 3
-    @cutoff  = (@cutoff  / MagReader::SPEEDTEST_LENGTH).to_i + 3
+    @cutoff  = (@cutoff  / MagReader::SPEEDTEST_LENGTH).to_i
+    @cutoff1 = (@cutoff1 / MagReader::SPEEDTEST_LENGTH).to_i + 3
     @cutoff2 = (@cutoff2 / MagReader::SPEEDTEST_LENGTH).to_i + 3
     @cutoff3 = (@cutoff3 / MagReader::SPEEDTEST_LENGTH).to_i + 3
   end
@@ -181,7 +183,7 @@ module Help7
 
     current_block.length.times { |i|
       byte = 0
-      debug(30) { '   ' + '-' * (@cutoff.to_i - 1) + '|' + '-' * (@cutoff2 - @cutoff - 1).to_i + '|' + '-' * (@cutoff3 - @cutoff2 - 1).to_i + '|' + '-----------------' }
+      debug(30) { '   ' + '-' * (@cutoff1.to_i - 1) + '|' + '-' * (@cutoff2 - @cutoff1 - 1).to_i + '|' + '-' * (@cutoff3 - @cutoff2 - 1).to_i + '|' + '-----------------' }
 
       # Read a byte
       4.times do
@@ -190,7 +192,7 @@ module Help7
         debug(30) { ("%3d" % [ len ] ) + ('=' * len) }
 
         case
-        when len <= @cutoff then
+        when len <= @cutoff1 then
           nibble = this_block_nibbles & 3
         when len <= @cutoff2 then
           nibble = (this_block_nibbles & 014) >> 2
