@@ -24,28 +24,32 @@ module Help7
   def find_block_marker
     pre_marker = false
 
-    loop {
+    loop do
       if pre_marker then
-        read_period # Skip a period
-
         len = read_period
 
-        debug(30) { "Looking for LONG marker @ #{current_sample_position}, len=#{len}, need > #{@cutoff3} and < #{@marker_cutoff}" }
+        debug(30) { "Looking for LONG marker @ #{current_sample_position}, len=#{len}, need > #{@const50} and <= #{@const50 + @const25}" }
 
-        if (len > @cutoff3) && (len < @marker_cutoff) then
+        if (len > @const50) && (len <= (@const50 + @const25)) then
           debug(30) { "--- Found LONG marker @".green + current_sample_position.to_s.bold }
           break
         else
           pre_marker = false
         end
       else
-        len = read_period
+        len = read_semiperiod
+        debug(30) { "Looking for LONG marker @ #{current_sample_position}, len=#{len}, need > #{@cutoff} and <= #{2 * @cutoff}" }
+
         if (len > @cutoff) && (len <= 2 * @cutoff) then
           debug(30) { "--- Found short marker @".green + current_sample_position.to_s.bold }
+
+          read_semiperiod(!@inv_phase) # Skip 2nd half
+          read_period  # Skip a period
+          read_period  # Skip a period
           pre_marker = true
         end
       end
-    }
+    end
   end
 
   def read_block_header(arr, arr_len)
@@ -67,16 +71,18 @@ module Help7
   end
 
   def compute_cutoffs
-    @cutoff  = @total_speedtest_length * 1.5
-    @cutoff1 = @total_speedtest_length * 1.5
-    @cutoff2 = @total_speedtest_length * 3.0
-    @cutoff3 = @total_speedtest_length * 4.5
+    @length_of_0 = @total_speedtest_length
+    @cutoff  = (@total_speedtest_length * 1.5)
+    @cutoff1 = (@total_speedtest_length * 1.5)
+    @const25 = (@total_speedtest_length * 2.5)
+    @const35 = (@total_speedtest_length * 3.5)
+    @const50 = @const25 + @const35
 
-    @marker_cutoff = (((@cutoff2 + @cutoff3) / MagReader::SPEEDTEST_LENGTH) + 8).to_i + 3
-    @cutoff  = (@cutoff  / MagReader::SPEEDTEST_LENGTH).to_i
-    @cutoff1 = (@cutoff1 / MagReader::SPEEDTEST_LENGTH).to_i + 3
-    @cutoff2 = (@cutoff2 / MagReader::SPEEDTEST_LENGTH).to_i + 3
-    @cutoff3 = (@cutoff3 / MagReader::SPEEDTEST_LENGTH).to_i + 3
+    @cutoff  = (@cutoff  / MagReader::SPEEDTEST_LENGTH).floor
+    @cutoff1 = (@cutoff1 / MagReader::SPEEDTEST_LENGTH * 1.35).floor
+    @const25 = (@const25 / MagReader::SPEEDTEST_LENGTH * 1.35).floor
+    @const35 = (@const35 / MagReader::SPEEDTEST_LENGTH * 1.35).floor
+    @const50 = (@const50 / MagReader::SPEEDTEST_LENGTH * 1.35).floor
   end
 
   def read_help7_body(block_length)
@@ -115,7 +121,7 @@ module Help7
 
           debug(6) { "Blocks remaining to read: " + read_blocks.collect { |f| f ? '+'.green : '-'.red }.join }
           debug(7) { "Bytes remaining to read:  " + bytes_remaining.to_s.bold }
-        else 
+        else
           debug(7) { "Block already read. Bytes remaining to read: " + bytes_remaining.to_s.bold }
         end
 
@@ -174,7 +180,7 @@ module Help7
       end
     end
 
-    debug(10) { "Found block data header" }
+    debug(10) { "Found block data header @ #{current_sample_position}" }
 
     read_period
     read_period
@@ -183,7 +189,7 @@ module Help7
 
     current_block.length.times { |i|
       byte = 0
-      debug(30) { '   ' + '-' * (@cutoff1.to_i - 1) + '|' + '-' * (@cutoff2 - @cutoff1 - 1).to_i + '|' + '-' * (@cutoff3 - @cutoff2 - 1).to_i + '|' + '-----------------' }
+      debug(30) { '   ' + '-' * (@cutoff1.to_i - 1) + '}' + '-' * (@const25 - @cutoff1 - 1).to_i + '}' + '-' * (@const35 - @const25 - 1).to_i + '}' + '-----------------' }
 
       # Read a byte
       4.times do
@@ -192,14 +198,14 @@ module Help7
         debug(30) { ("%3d" % [ len ] ) + ('=' * len) }
 
         case
-        when len <= @cutoff1 then
-          nibble = this_block_nibbles & 3
-        when len <= @cutoff2 then
-          nibble = (this_block_nibbles & 014) >> 2
-        when len <= @cutoff3 then
-          nibble = (this_block_nibbles & 060) >> 4
-        else
+        when len > @const35 then
           nibble = (this_block_nibbles & 0300) >> 6
+        when len > @const25 then
+          nibble = (this_block_nibbles & 060) >> 4
+        when len > @cutoff1 then
+          nibble = (this_block_nibbles & 014) >> 2
+        else
+          nibble = this_block_nibbles & 3
         end
 
         byte = byte >> 1
@@ -216,7 +222,7 @@ module Help7
 
     debug(20) { "End of block @ #{current_sample_position}" }
 
-    debug(7) { ' * '.blue.bold + "Computed block checksum : #{Tools::octal(current_block.compute_checksum + current_block.owner_file_checksum).bold}" }
+    debug(7) { ' * '.blue.bold + "Computed block checksum : #{Tools::octal(current_block.compute_checksum).bold}" }
     debug(7) { ' * '.blue.bold + "Read block checksum     : #{Tools::octal(current_block.checksum).bold}" }
 
     debug(5) { "Verifying block #{current_block.number} checksum: #{current_block.validate_checksum ? 'success'.green : 'failed'.red }" }

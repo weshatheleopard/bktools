@@ -156,7 +156,7 @@ attr_accessor :debug_bytes
     if !ignore_length_errors && (data_len > (@length_of_0 * BIT_TOO_LONG)) then
       array_position = ", byte ##{@current_array.size}" if @current_array
 
-      debug(1) { puts "WARNING:".bold + " data bit too long (#{data_len}) @ #{current_sample_position}#{array_position}".red }
+      debug(1) { "WARNING:".bold + " data bit too long (#{data_len}) @ #{current_sample_position}#{array_position}".red }
     end
 
     data_len

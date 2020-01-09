@@ -10,11 +10,15 @@ class Help7Block
     self.body = []
   end
 
-  def compute_checksum
+  def compute_body_checksum
     Tools::checksum(body)
   end
 
+  def compute_checksum
+    Tools::adc(owner_file_checksum + compute_body_checksum)
+  end
+
   def validate_checksum
-    checksum == Tools::adc(owner_file_checksum + compute_checksum)
+    checksum == compute_checksum
   end
 end
