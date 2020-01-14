@@ -107,7 +107,7 @@ class BkFile
   end
 
   def save(prefix = "bkfile")
-    safe_name = name.gsub(/[^+\&-'_., 0-9a-zA-Z]/, '_')
+    safe_name = name.gsub(/[^-+\&-'_., 0-9a-zA-Z]/, '_')
     base_name = "#{prefix}.[#{safe_name}]"
 
     if start_address.nil? then
@@ -125,16 +125,16 @@ class BkFile
       return
     end
 
+    File.open("#{base_name}.bin", 'wb') { |f|
+      body.each { |byte| f << byte.chr }
+    }
+
     File.open("#{base_name}.metadata", 'wb') { |f|
       f.puts  "File name     : [#{name}]"
       f.puts  "Start address : #{Tools::octal(start_address)}"
       f.puts  "File length   : #{Tools::octal(length)}"
       f.puts  "Tape checksum : #{Tools::octal(checksum)}"
       f.puts  "Data checksum : #{Tools::octal(compute_checksum)}"
-    }
-
-    File.open("#{base_name}.bin", 'wb') { |f|
-      body.each { |byte| f << byte.chr }
     }
 
     return true
@@ -168,7 +168,7 @@ class BkFile
           bkf.checksum = Tools::read_octal(value.pack('c*'))
         when "Data checksum : " then
           data_checksum = bkf.compute_checksum
-          rause if data_checksum != Tools::read_octal(value.pack('c*'))
+          raise if data_checksum != Tools::read_octal(value.pack('c*'))
         end
       }
     }

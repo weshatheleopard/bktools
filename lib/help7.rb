@@ -58,7 +58,7 @@ module Help7
 
       if (len > @cutoff) && (len < 2 * @cutoff) then
         # Pilot bits are done
-        debug(10) { "Block header marker found @".green + current_sample_position.to_s.bold }
+        debug(10) { "Block header marker found @ ".green + current_sample_position.to_s.bold }
 
         read_semiperiod(!@inv_phase) # Skip the rest of period
         break
@@ -82,7 +82,15 @@ module Help7
     @cutoff1 = (@cutoff1 / MagReader::SPEEDTEST_LENGTH * 1.35).floor
     @const25 = (@const25 / MagReader::SPEEDTEST_LENGTH * 1.35).floor
     @const35 = (@const35 / MagReader::SPEEDTEST_LENGTH * 1.35).floor
-    @const50 = (@const50 / MagReader::SPEEDTEST_LENGTH * 1.35).floor
+    @const50 = (@const50 / MagReader::SPEEDTEST_LENGTH * 1.2).floor  # was 1.35
+
+    # Compensation for high-speed mode
+    if @length_of_0 < (MagReader::SPEEDTEST_LENGTH * 7) then
+      @cutoff1 += 3
+      @const25 += 3
+      @const35 += 3
+    end
+
   end
 
   def read_help7_body(block_length)
@@ -129,7 +137,6 @@ module Help7
           debug(0) { "Verifying file checksum: #{@bk_file.validate_checksum ? 'success'.green : 'failed'.red }" }
           break
         end
-
       end
     }
   end
@@ -180,7 +187,7 @@ module Help7
       end
     end
 
-    debug(10) { "Found block data header @ #{current_sample_position}" }
+    debug(10) { "Found block data header @ ".green + current_sample_position.to_s.bold }
 
     read_period
     read_period
@@ -222,10 +229,10 @@ module Help7
 
     debug(20) { "End of block @ #{current_sample_position}" }
 
-    debug(7) { ' * '.blue.bold + "Computed block checksum : #{Tools::octal(current_block.compute_checksum).bold}" }
     debug(7) { ' * '.blue.bold + "Read block checksum     : #{Tools::octal(current_block.checksum).bold}" }
+    debug(7) { ' * '.blue.bold + "Computed block checksum : #{Tools::octal(current_block.compute_checksum).bold}" }
 
-    debug(5) { "Verifying block #{current_block.number} checksum: #{current_block.validate_checksum ? 'success'.green : 'failed'.red }" }
+    debug(5) { "Verifying block #{current_block.number.to_s.bold} checksum: #{current_block.validate_checksum ? 'success'.green : 'failed'.red }" }
 
     if current_block.validate_checksum then
       return current_block
