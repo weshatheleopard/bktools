@@ -4,6 +4,8 @@ The file is splits into multiple "blocks", each having their own independent che
 
 File header completely matched the standard file header, which allowed the file names to be displayed just fine when reviewing the tape.
 
+For definition of `marker sequence` and `byte sequence` see the [description of standard tape format](bk_tape_format.md).
+
 File name:
 ```
 {
@@ -16,11 +18,11 @@ File name:
 Block sequence
 ```
 {
-  * marker sequence(50d, 0)    - block marker
-  * marker sequence(9d, 32d)   - block header marker
-  * byte sequence              - block header data: nibble mapping (1 byte) + block number (1 byte, 1-based) + block checksum (2 bytes)
-  * marker sequence(35d, 0)    - block data marker
-  * byte sequence              - array_data ("block length" bytes)
+  * marker sequence(50d, 0)            - block marker
+  * marker sequence(9d, 32d)           - block header marker
+  * byte sequence * 4                  - block header data: nibble mapping (1 byte) + block number (1 byte, 1-based) + block checksum (2 bytes)
+  * marker sequence(35d, 0)            - block data marker
+  * nibble period * (4 * block length) - block data
 }
 
 ```
@@ -29,10 +31,12 @@ File sequence:
 {
   * marker sequence(4096d, 0)  - pilot marker
   * marker sequence(8d, 0)     - header marker
-  * byte sequence              - header data: address (2 bytes) + length (2 bytes) + file name (16d bytes)
+  * byte sequence * 20d        - header data: address (2 bytes) + length (2 bytes) + file name (16d bytes)
   * marker sequence(255d, 0)   - file marker
-  * byte sequence              - file checksum (2 bytes)
-  * quick marker sequence (3 pulses of shortened length)
-  * block sequence (as needed)
+  * byte sequence * 2          - file checksum
+  {
+    * short marker             (3 short pulses)
+    * block sequence
+  }                            - as many times as neeeded, last block can be shorter than others if needed.
 }
 ```

@@ -71,7 +71,6 @@ module Help7
   end
 
   def compute_cutoffs
-    @length_of_0 = @total_speedtest_length
     @cutoff  = (@total_speedtest_length * 1.5)
     @cutoff1 = (@total_speedtest_length * 1.5)
     @const25 = (@total_speedtest_length * 2.5)
@@ -85,7 +84,7 @@ module Help7
     @const50 = (@const50 / MagReader::SPEEDTEST_LENGTH * 1.2).floor  # was 1.35
 
     # Compensation for high-speed mode
-    if @length_of_0 < (MagReader::SPEEDTEST_LENGTH * 7) then
+    if @total_speedtest_length < (MagReader::SPEEDTEST_LENGTH * 7) then
       @cutoff1 += 3
       @const25 += 3
       @const35 += 3
@@ -146,10 +145,10 @@ module Help7
 
     read_block_header(block_header_array, 4)
 
-    # The byte encodes which 2 bits pulse of a particular length
-    this_block_nibbles = block_header_array[0]  #  encodes in this block
+    # The byte denotes which 2 bits a pulse of a particular length encodes in this block
+    this_block_nibbles = block_header_array[0]
 
-    # Nibbles correspond to periods measured in length of a period of the pilot tone:
+    # Nibbles that correspond to a period (measured in length of a period of the pilot tone):
 
     # byte: 76543210
     #       |||||||+---       < 1.5 of sync tone period, most significant bit
@@ -166,7 +165,8 @@ module Help7
     current_block.number = block_header_array[1] # 1-based
 
     current_block.length =
-      if current_block.number == @num_of_blocks then @bk_file.length - (@num_of_blocks * @block_length) + @block_length
+      if current_block.number == @num_of_blocks then # Last block may be shorter than others
+        @bk_file.length - ((@num_of_blocks - 1) * @block_length)
       else @block_length
       end
 
