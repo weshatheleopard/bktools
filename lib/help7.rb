@@ -67,6 +67,7 @@ module Help7
 
     read_period  # Skip period
 
+    debug(11) { "Reading block header data starting @ ".green + current_sample_position.to_s.bold }
     read_bytes_without_marker(arr, arr_len)
   end
 
@@ -85,9 +86,9 @@ module Help7
 
     # Compensation for high-speed mode
     if @total_speedtest_length < (MagReader::SPEEDTEST_LENGTH * 7) then
-      @cutoff1 += 3
-      @const25 += 3
-      @const35 += 3
+      @cutoff1 += 4
+      @const25 += 4
+      @const35 += 4
     end
 
   end
@@ -147,6 +148,10 @@ module Help7
 
     # The byte denotes which 2 bits a pulse of a particular length encodes in this block
     this_block_nibbles = block_header_array[0]
+    nibbles = [ (this_block_nibbles & 3),
+                (this_block_nibbles & 014) >> 2,
+                (this_block_nibbles & 060) >> 4,
+                (this_block_nibbles & 0300) >> 6 ]
 
     # Nibbles that correspond to a period (measured in length of a period of the pilot tone):
 
@@ -204,16 +209,14 @@ module Help7
 
         debug(30) { ("%3d" % [ len ] ) + ('=' * len) }
 
-        case
-        when len > @const35 then
-          nibble = (this_block_nibbles & 0300) >> 6
-        when len > @const25 then
-          nibble = (this_block_nibbles & 060) >> 4
-        when len > @cutoff1 then
-          nibble = (this_block_nibbles & 014) >> 2
-        else
-          nibble = this_block_nibbles & 3
-        end
+        nibble_idx = case
+                     when len > @const35 then 3
+                     when len > @const25 then 2
+                     when len > @cutoff1 then 1
+                     else 0
+                     end
+
+        nibble = nibbles[nibble_idx]
 
         byte = byte >> 1
         byte = byte | 0200 if (nibble & 2) != 0

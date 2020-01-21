@@ -15,6 +15,7 @@ This format was supported by a number of application programs that had to be loa
 
 [Description of HELP7 tape format](help7_tape_format.md).
 
+# Using this tool
 
 ## Reading data from a WAV file
 
