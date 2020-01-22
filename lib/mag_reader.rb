@@ -35,7 +35,8 @@ attr_accessor :debug_bytes
 
   def debug(msg_level)
     return if msg_level > @debuglevel
-    puts(yield)
+    msg = yield
+    puts(msg) if msg
   end
 
   def read_sample
@@ -220,16 +221,16 @@ attr_accessor :debug_bytes
 
   def read_bytes_without_marker(arr, len)
     len.times do |i|
-      @byte = 0
+      byte = 0
 
       8.times do
         bit = read_bit
-        @byte = (@byte >> 1) | ((bit) ? 128 : 0)
+        byte = (byte >> 1) | ((bit) ? 128 : 0)
       end
 
-      debug(10) { "--- byte #{Tools::octal(i + 1).bold} of #{Tools::octal(len).bold} read: #{Tools::octal_byte(@byte).yellow.bold}" } #(#{@byte.chr})" }
+      debug(10) { "--- byte #{Tools::octal(i + 1).bold} of #{Tools::octal(len).bold} read: #{Tools::octal_byte(byte).yellow.bold}" } #(#{byte.chr})" }
 
-      arr << @byte
+      arr << byte
 
 #puts current_sample_position if debug_bytes && debug_bytes.include?(@current_array.size)
 

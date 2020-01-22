@@ -28,7 +28,10 @@ module Help7
       if pre_marker then
         len = read_period
 
-        debug(30) { "Looking for LONG marker @ #{current_sample_position}, len=#{len}, need > #{@const50} and <= #{@const50 + @const25}" }
+        debug(30) { if len > 0 then
+                      "Looking for LONG marker @ #{current_sample_position}, len=#{len}, need > #{@const50} and <= #{@const50 + @const25}"
+                    else nil
+                    end }
 
         if (len > @const50) && (len <= (@const50 + @const25)) then
           debug(30) { "--- Found LONG marker @".green + current_sample_position.to_s.bold }
@@ -38,7 +41,10 @@ module Help7
         end
       else
         len = read_semiperiod
-        debug(30) { "Looking for LONG marker @ #{current_sample_position}, len=#{len}, need > #{@cutoff} and <= #{2 * @cutoff}" }
+        debug(30) { if len > 0 then
+                      "Looking for short marker @ #{current_sample_position}, len=#{len}, need > #{@cutoff} and <= #{2 * @cutoff}"
+                    else nil
+                    end }
 
         if (len > @cutoff) && (len <= 2 * @cutoff) then
           debug(30) { "--- Found short marker @".green + current_sample_position.to_s.bold }
@@ -201,13 +207,16 @@ module Help7
 
     current_block.length.times { |i|
       byte = 0
-      debug(30) { '   ' + '-' * (@cutoff1.to_i - 1) + '}' + '-' * (@const25 - @cutoff1 - 1).to_i + '}' + '-' * (@const35 - @const25 - 1).to_i + '}' + '-----------------' }
+      debug(30) {
+        @max_cols = ENV['COLUMNS'].to_i
+        @max_cols = 80 if @max_cols < 80
+
+        '                ' + '-' * (@cutoff1.to_i - 1) + '>' + '-' * (@const25 - @cutoff1 - 1).to_i + '>' + '-' * (@const35 - @const25 - 1).to_i + '>' + '-----------------'
+      }
 
       # Read a byte
       4.times do
         len = read_period
-
-        debug(30) { ("%3d" % [ len ] ) + ('=' * len) }
 
         nibble_idx = case
                      when len > @const35 then 3
@@ -218,6 +227,16 @@ module Help7
 
         nibble = nibbles[nibble_idx]
 
+        debug(30) { meter = ('=' * len)
+                    meter = case nibble_idx
+                            when 0 then meter.green
+                            when 1 then meter.blue
+                            when 2 then meter.yellow
+                            when 3 then meter.red
+                            end
+
+                   ("%10u %1u %3u" % [ current_sample_position, nibble, len ]).bold + meter }
+
         byte = byte >> 1
         byte = byte | 0200 if (nibble & 2) != 0
 
@@ -225,7 +244,10 @@ module Help7
         byte = byte | 0200 if (nibble & 1) != 0
       end
 
-      debug(14) { "--- byte #{Tools::octal(i + 1).bold} of #{Tools::octal(current_block.length).bold} read: #{Tools::octal_byte(byte).yellow.bold}" } #(#{@byte.chr})" }
+      debug(14) {
+        ch = if byte > 31 then "(#{byte.chr})" else '' end
+
+        "--- byte #{Tools::octal(i + 1).bold} of #{Tools::octal(current_block.length).bold} read: #{Tools::octal_byte(byte).yellow.bold} #{ch}" }
 
       current_block.body << byte
     }
