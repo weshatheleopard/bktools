@@ -62,7 +62,12 @@ module Help7
     loop do
       len = read_semiperiod # Note we are reading SEMIperiod here
 
-      if (len > @cutoff) && (len < 2 * @cutoff) then
+      debug(30) { if len > 0 then
+                    "Looking for block header marker @ #{current_sample_position}, len=#{len}, need > #{@cutoff} and <= #{2 * @cutoff}"
+                  else nil
+                  end }
+
+      if (len > @cutoff) && (len <= (2 * @cutoff)) then
         # Pilot bits are done
         debug(10) { "Block header marker found @ ".green + current_sample_position.to_s.bold }
 
