@@ -106,7 +106,7 @@ module Help7
 
   def read_help7_body(block_length)
     @block_length = block_length
-    debug(7) { ' * '.blue.bold + "HELP7M block length = #{Tools::octal(@block_length)}".yellow }
+    debug(7) { ' * '.blue.bold + "HELP7M block length = #{Tools::octal(block_length)}".yellow }
 
     @help7_checksum_array = []
 
@@ -119,7 +119,7 @@ module Help7
     compute_cutoffs
 
     bytes_remaining = @bk_file.length
-    @num_of_blocks = ((@bk_file.length - 1).divmod(@block_length).first + 1)
+    @num_of_blocks = ((@bk_file.length - 1).divmod(block_length).first + 1)
     read_blocks = Array.new(@num_of_blocks)
 
     loop {
@@ -128,7 +128,7 @@ module Help7
       current_block = Help7Block.new
 
       if block = read_help7_block(current_block) then
-        block_address = (block.number - 1) * @block_length
+        block_address = (block.number - 1) * block_length
 
         if read_blocks[block.number - 1] != true then
           block.length.times { |i|

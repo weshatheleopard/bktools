@@ -1,6 +1,9 @@
 require 'term/ansicolor'
 include Term::ANSIColor
 
+require 'disassembler'
+include Disassembler
+
 class BkFile
 
   attr_accessor :start_address

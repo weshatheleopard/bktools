@@ -56,3 +56,17 @@ In case you have one big WAV image of a magnetic tape with multiple files on it,
 require 'mag_reader' ; m = MagReader.new('tape.wav', 50); m.split_tape
 
 ```
+
+# Experimental features
+
+## Display file as octal printout
+```
+bk_file.display
+
+```
+
+## Display file as PDP-11 disassembly
+```
+bk_file.disassemble
+
+```

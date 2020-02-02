@@ -53,4 +53,12 @@ module Tools
     arr.inject(0) { |cksum, byte| Tools::adc(cksum + byte) }
   end
 
+  def self.rollover(val)
+    if (val > 0o177777) then
+      val -= 0o200000
+    else
+      val
+    end
+  end
+
 end
