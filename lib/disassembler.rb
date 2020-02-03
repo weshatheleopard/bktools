@@ -2,6 +2,8 @@ module Disassembler
   # PDP-11 handbook: http://gordonbell.azurewebsites.net/digital/pdp%2011%20handbook%201969.pdf
   # Written with heavy inflience from https://github.com/caldwell/pdp11dasm
 
+  REGISTER_NAMES = %w{ R0 R1 R2 R3 R4 R5 SP PC }
+
   def disassemble
     # TODO: currently start address must be even
     # TODO: add autostart detection
@@ -275,13 +277,7 @@ module Disassembler
 
   def parse_operand(code)
     r = code & 0o7
-
-    case r
-    when 6 then reg = 'SP'
-    when 7 then reg = 'PC'
-    else reg = "R#{r}"
-    end
-
+    reg = REGISTER_NAMES[r]
 
     case (code & 0o70)
     when 0o00 then reg
