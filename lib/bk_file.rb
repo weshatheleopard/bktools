@@ -143,7 +143,7 @@ class BkFile
     return true
   end
 
-  def self.load(name)
+  def self.load(name, force = false)
     bkf = self.new
 
     File.open("#{name}.bin", 'rb') { |f|
@@ -171,7 +171,7 @@ class BkFile
           bkf.checksum = Tools::read_octal(value.pack('c*'))
         when "Data checksum : " then
           data_checksum = bkf.compute_checksum
-          raise if data_checksum != Tools::read_octal(value.pack('c*'))
+          raise if force || (data_checksum != Tools::read_octal(value.pack('c*')))
         end
       }
     }
