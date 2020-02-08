@@ -4,28 +4,28 @@ module Disassembler
 
   REGISTER_NAMES = %w{ R0 R1 R2 R3 R4 R5 SP PC }
 
-  def disassemble_with_labels(labels = {})
-    disassemble(true) # 1st pass to create labels
-    disassemble(true) # 2nd pass to print text with labels
+  def disassemble_with_labels(predefined_labels = {})
+    # TODO: populate @labels and @references from predefined_labels
+    disassemble(1)
+    disassemble(2)
+    disassemble(3)
   end
 
-  def get_label(address)
-    @labels = {} unless defined?(@labels)
+  def disassemble(pass = nil)
+    str = nil
 
-    label = @labels[address]
-    return label unless label.nil?
+    case pass
+    when 1 then # 1st pass to determine command base addresses
+      @acceptable_label_addresses = []
+    when 2 then # 2nd pass to determine labels
+      @labels = {}      # Label corresponding to a particular address
+      @references = {}  # Text indicating how to refer to a particular address
+    when 3, nil
+      str = ''
+    end
 
-    return nil if (address < start_address) || (address > (start_address + length))
-    @label_no = (@label_no || 0) + 1
-    @labels[address] = "L#{@label_no}"
-  end
-
-  def disassemble(with_labels = false)
-    @with_labels = with_labels
-    str = ''
     # TODO: currently start address must be even
     # TODO: add autostart detection
-    # TODO: make sure lables point at the start of a command, use "+2,+4" syntax otherwise
     # TODO: distinguish between local and global labels
     @current_offset = 0
 
@@ -34,7 +34,10 @@ module Disassembler
     while @current_offset < body.length do
       oct = ''
       start_offset = @current_offset
+      @acceptable_label_addresses << (start_address + @current_offset) if pass == 1
       cmd, step, newline, label = decode
+
+      next unless str
 
       case step
       when 2 then oct = Tools::octal(word_at(start_offset)) + "              "
@@ -346,9 +349,30 @@ module Disassembler
     start_address + (@current_offset + 2) + (offset * 2)
   end
 
+  def make_new_label
+    @label_no ||= 0
+    "L#{@label_no += 1}"
+  end
+
+  def get_label(address)
+    return nil unless defined?(@labels)
+
+    if @acceptable_label_addresses.include?(address) then
+      @labels[address] ||= make_new_label
+      @references[address] ||= @labels[address]
+    else
+      closest_address = @acceptable_label_addresses.select{ |a| a <= address }.max
+      @labels[closest_address] ||= make_new_label
+      @references[address] = "#{@labels[closest_address]}+#{address - closest_address}"
+    end
+  end
+
   def address_or_label(address)
-    label = @with_labels && get_label(address)
-    return label if label
+    if (address >= start_address) && (address <= (start_address + length)) then
+      label = get_label(address)
+      return label if label
+    end
+
     address.to_s(8)
   end
 end
