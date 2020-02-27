@@ -57,6 +57,11 @@ module Disassembler
     Tools::bytes2word(body[offset], body[offset + 1])
   end
 
+  # Output: a set of following values:
+  #  * Complete command mnemonic;
+  #  * Number of bytes current command with all parameters occupies;
+  #  * Whether a newline should follow the command;
+  #  * Label that should precede the command.
   def decode
     if @cmp_step == 1 then
       @cmp_step = 2
@@ -90,9 +95,13 @@ module Disassembler
         when 0o000200 then
           case (current_word)
           when 0o200, 0o201, 0o202, 0o203, 0o204, 0o205, 0o206
-            then cmd = "RTS\t" + parse_operand(current_word & 0o7)
+            then
+              newline = true
+              cmd = "RTS\t" + parse_operand(current_word & 0o7)
           when 0o207
-            then cmd = "RET"
+            then
+              newline = true
+              cmd = "RET"
           when 0o240 then cmd = "NOP"
           when 0o241 then cmd = "CLC"
           when 0o242 then cmd = "CLV"
@@ -187,6 +196,7 @@ module Disassembler
     when 0o070000 then
       case (current_word & 0o177000)
       when 0o077000 then
+        newline = true
         address = (start_address + @current_offset + 2 - ((current_word & 0o77) * 2))
         cmd = "SOB\t" + parse_operand((current_word >> 6) & 0o7) + ',' + address_or_label(address)
       end

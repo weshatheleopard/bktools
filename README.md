@@ -7,13 +7,13 @@ Unlike some other renditions, this desccription has been derived from the analys
 
 The code that supports this format is located in the computer's ROM. No additional software is required to handle it.
 
-[Description of standard tape format](bk_tape_format.md).
+[Description of standard tape format](doc/bk_tape_format.md).
 
 # Accelerated (HELP7) tape format
 
 This format was supported by a number of application programs that had to be loaded first.
 
-[Description of HELP7 tape format](help7_tape_format.md).
+[Description of HELP7 tape format](doc/help7_tape_format.md).
 
 # Using this tool
 
@@ -66,7 +66,15 @@ bk_file.display
 ```
 
 ## Display file as PDP-11 disassembly
+
 ```
 bk_file.disassemble
+
+```
+
+### Display labels instead of addresses
+
+```
+bk_file.disassemble_with_labels
 
 ```
