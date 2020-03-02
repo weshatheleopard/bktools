@@ -295,6 +295,7 @@ module Disassembler
     when 0o150000 then
       cmd = "BISB\t" + parse_operand((current_word >> 6) & 0o77) + ',' + parse_operand(current_word & 0o77)
     when 0o160000 then
+      @cmp_step = 1
       cmd = "SUB\t" + parse_operand((current_word >> 6) & 0o77) + ',' + parse_operand(current_word & 0o77)
     end
 
