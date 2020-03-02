@@ -11,7 +11,7 @@ module Focal
 
     until offset == EOF_OFFSET do
       line, offset = parse_line(offset)
-      result << line << "\n"
+      result << line << "\n" if line
     end
 
     result
@@ -25,8 +25,18 @@ module Focal
 
     offset +=2
 
-    line_group = body[offset + 1]
-    line_no = body[offset] # There's some strange conversion routine here, I'll investigate later
+    line_val = Tools::bytes2word(body[offset], body[offset + 1]) * 1000 / 256
+
+    if line_val == 0 then
+      return [ nil, next_line_offset ]
+    end
+
+    # I still do not understand this logic here, but it seems to be functioning properly.
+    # Thanks Alexander Lunev for the idea -- http://bk0010.narod.ru/readme.html
+    line_group = line_val / 1000
+    line_no = line_val % 1000
+    line_no += 10 if (line_no % 10) >= 5
+    line_no = line_no / 10
 
     offset +=2
 
@@ -45,10 +55,10 @@ module Focal
         when 0205 then '^'
         when 0206 then '('
         when 0207 then '['
-        when 0210 then '>'
+        when 0210 then '<'
         when 0211 then ')'
         when 0212 then ']'
-        when 0213 then '<'
+        when 0213 then '>'
         when 0214 then ','
         when 0215 then ';'
         when 0216 then "\n"
@@ -58,7 +68,7 @@ module Focal
 
       offset += 1
     end
-
+ 
     return [ "#{line_group}.#{line_no} #{line_content}", next_line_offset ]
   end
 
