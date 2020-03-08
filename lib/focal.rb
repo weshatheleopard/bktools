@@ -69,6 +69,7 @@ module Focal
       offset += 1
     end
  
+    line_no = "0#{line_no}" if line_no < 10
     return [ "#{line_group}.#{line_no} #{line_content}", next_line_offset ]
   end
 
