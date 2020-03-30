@@ -29,8 +29,8 @@ module WaveformFixer
     offset_buffer = WaveFile::Buffer.new([ 0 ] * original_buffer.samples.size, WaveFile::Format.new(:mono, :pcm_16, 44100))
 
     original_buffer.samples.each_with_index { |v, i|
-      if v > 31000 then v = 31000
-      elsif v < -31000 then v = -31000
+      if v > 30000 then v = 30000
+      elsif v < -30000 then v = -30000
       end
 
       case current_state

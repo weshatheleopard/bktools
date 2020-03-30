@@ -29,7 +29,6 @@ attr_accessor :debug_bytes
 
     @debuglevel = debuglevel
     @filename = filename # FIXME?
-    @bk_file = BkFile.new
     @reader = WaveFile::Reader.new(@filename, WaveFile::Format.new(:mono, :pcm_16, 44100))
   end
 
@@ -278,6 +277,7 @@ attr_accessor :debug_bytes
   end
 
   def read
+    @bk_file = BkFile.new
     @inv_phase = false
 
     loop do #

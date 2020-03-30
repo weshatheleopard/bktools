@@ -186,4 +186,20 @@ class BkFile
     body.pack('c*')
   end
 
+  def inspect
+    b = if @body.size > 16 then
+          @body[0..16].inspect.gsub(']', ', ...]')
+        else
+          @body.inspect
+        end
+
+    "#<BkFile start_address=" +
+      (@start_address.nil? ? 'nil' : Tools::octal(@start_address)) +
+      ' name: ' + @name.inspect +
+      ' length: '   + (@length.nil? ? 'nil' : Tools::octal(@length)) +
+      ' checksum: ' + (@checksum.nil? ? 'nil' : Tools::octal(@checksum)) +
+      ' body: ' + b.to_s +
+      '>'
+  end
+
 end
