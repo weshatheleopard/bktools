@@ -68,11 +68,17 @@ module WaveformFixer
       corrected_buffer.samples[i] = corrected_value
     }
 
+    base_path = File.dirname(@filename)
+    file_ext  = File.extname(@filename)
+    file_name = File.basename(@filename, file_ext)
+
     # Save the centerline offset buffer (so you can see how adjustment was applied)
-    WaveFile::Writer.new("__offset.wav", WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(offset_buffer) }
+    WaveFile::Writer.new(Pathname.new(base_path).join(file_name + "_offset" + file_ext),
+                           WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(offset_buffer) }
 
     # Save the corrected waveform
-    WaveFile::Writer.new("__straightened.wav", WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(corrected_buffer) }
+    WaveFile::Writer.new(Pathname.new(base_path).join(file_name + "_straightened" + file_ext),
+                           WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(corrected_buffer) }
 
     corrected_buffer
   end

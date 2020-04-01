@@ -46,6 +46,9 @@ attr_accessor :debug_bytes
     end
 
     val = @buffer.samples[@buffer_idx]
+
+    raise EOFError if val.nil?
+
     @buffer_idx += 1
 
     return val
