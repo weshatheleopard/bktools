@@ -7,6 +7,9 @@ include Disassembler
 require 'focal'
 include Focal
 
+require 'bk_image'
+include BkImage
+
 class BkFile
 
   attr_accessor :start_address
@@ -112,8 +115,11 @@ class BkFile
     flag
   end
 
+  def safe_name
+    name.gsub(/[^0-9a-zA-Z\!\@\#\$\%\^\&\(\)\[\]\{\}\-\=\_\+\.\,\'\ ]/, '_')
+  end
+
   def save(prefix = "bkfile")
-    safe_name = name.gsub(/[^-+\&-'_., 0-9a-zA-Z]/, '_')
     base_name = "#{prefix}.[#{safe_name}]"
 
     if start_address.nil? then
