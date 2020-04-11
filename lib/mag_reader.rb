@@ -297,10 +297,15 @@ attr_accessor :debug_bytes
       debug(2)  { "HELP7M file detected, proceeding to read".yellow }
 
       read_help7_body(Tools::bytes2word(bk_file.name.bytes[14], bk_file.name.bytes[15]))
-
-      return
+    else
+      read_body
     end
 
+    debug(0) { "Verifying file checksum: #{@bk_file.validate_checksum ? 'success'.green : 'failed'.red }" }
+    debug(1) { "Read complete." }
+  end
+
+  def read_body
     debug(5) { "Reading data..." }
     read_bytes_with_marker(@bk_file.body, @bk_file.length)
     debug(5) { "Data read successfully".green }
@@ -315,9 +320,6 @@ attr_accessor :debug_bytes
     debug(5) { "Checksum read successfully".green }
     debug(7) { ' * '.blue.bold + "File checksum     : #{Tools::octal(@bk_file.checksum).bold}" }
     debug(7) { ' * '.blue.bold + "Computed checksum : #{Tools::octal(@bk_file.compute_checksum).bold}" }
-
-    debug(0) { "Verifying checksum: #{@bk_file.validate_checksum ? 'success'.green : 'failed'.red }" }
-    debug(0) { "Read complete." }
   end
 
 end

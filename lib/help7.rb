@@ -144,10 +144,7 @@ module Help7
           debug(7) { "Block already read. Bytes remaining to read: " + bytes_remaining.to_s.bold }
         end
 
-        if bytes_remaining == 0 then
-          debug(0) { "Verifying file checksum: #{@bk_file.validate_checksum ? 'success'.green : 'failed'.red }" }
-          break
-        end
+        break if bytes_remaining == 0
       end
     }
   end
