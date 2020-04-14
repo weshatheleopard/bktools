@@ -178,7 +178,17 @@ module Disassembler
           cmd = "ASR\t" + parse_operand(current_word & 0o77)
         when 0o006300 then
           cmd = "ASL\t" + parse_operand(current_word & 0o77)
+        when 0o006400 then
+          cmd = "MARK\t" + (current_word & 0o77).to_s(8)
+        when 0o006500 then
+          cmd = "MFPI\t" + parse_operand(current_word & 0o77)
+        when 0o006600 then
+          cmd = "MTPI\t" + parse_operand(current_word & 0o77)
+        when 0o006700 then
+          cmd = "SXT\t" + parse_operand(current_word & 0o77)
         end
+      when 0o007000 then
+        # Not used
       end
     when 0o010000 then
       cmd = "MOV\t" + parse_operand((current_word >> 6) & 0o77) + ',' + parse_operand(current_word & 0o77)
