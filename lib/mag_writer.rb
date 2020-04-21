@@ -28,7 +28,7 @@ class MagWriter
   def write(filename)
     write_to_buffer
 
-    Writer.new(filename, Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(@buffer) }
+    Writer.new(filename, Format.new(:mono, :pcm_8, 44100)) { |writer| writer.write(@buffer) }
   end
 
   def write_to_buffer
