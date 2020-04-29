@@ -1,8 +1,7 @@
-require 'wavefile'
-include WaveFile
-
 require 'term/ansicolor'
 include Term::ANSIColor
+
+require 'mfm_track'
 
 # Read data from track flux file produced by KryoFlux -- https://www.kryoflux.com/
 
@@ -15,13 +14,22 @@ class FddReader
     @stream = nil
     @file_position = 0
     @stream_position = 0
-    @track_array = []
+    @indices_array = []
+    @flux_hash = {}
   end
 
+  # ==================== KryoFlux File Decoding ==================== #
+ 
+  # Take track file from KryoFlux and convert it to array of track images (arrays of flux lengths).
+  # Each item in the track image array corresponds to a single rotation of the floppy disk.
+  # Each track image may slightly differ due to hardware issues. We'll look into that later.
   def read_track
     File.open(@filename, "rb") { |f| @stream = f.read.bytes }
 
-    @revolution_array = []
+    @track = MfmTrack.new
+
+    @flux_hash = {}
+    @indices_array=[]
 
     loop do
       block_type = @stream[@file_position]
@@ -54,11 +62,23 @@ class FddReader
       end
     end
 
+    # All fluxes are now in @flux_hash, all index data in @indices_array
+    revolution_array = []
+    @flux_hash.keys.sort.each { |pos|
+      if @indices_array.include?(pos) # Index
+        @track.revolutions << revolution_array
+        revolution_array = []
+      end
+
+      revolution_array << @flux_hash[pos]
+    }
+
+    @track
   end
 
   def add_flux(val, stream_position)
-    debug(20) { "#{stream_position} => #{block_val}" }
-    @revolution_array << val
+    debug(20) { "#{stream_position} => #{val}" }
+    @flux_hash[stream_position] = val
   end
 
   def out_of_stream_block
@@ -88,15 +108,15 @@ class FddReader
       sample_counter = read_dword
       index_counter = read_dword
 
+      @indices_array << stream_position
+
       debug(10) {
         "Index signal data".blue.bold +
-          "\n  * Next KryoFlux stream position  : " + stream_position.to_s.bold +
+          "\n  * Stream position of index       : " + stream_position.to_s.bold +
+          "\n  * Current reader stream position : " + @stream_position.to_s.bold +
           "\n  * Sample Counter since last flux : " + sample_counter.to_s.bold +
           "\n  * Index Clock value              : " + index_counter.to_s.bold
       }
-
-      @track_array << @revolution_array if @revolution_array
-      @revolution_array = []
     when 0x03 then
       raise "Protocol error" if sz != 8
       stream_position = read_dword
@@ -138,24 +158,56 @@ class FddReader
     dword
   end
 
+  # ==================== Interpret fluxes as MFM encoded bits ==================== #
+
+  def parse_bitstream(bitstream)
+    state = :marker_search
+    idx = 0
+    byte = 0
+
+    loop do
+
+      case state
+      when :marker_search then
+        bit = bitstream[idx].to_i
+        byte = (byte << 1) | bit
+
+        if byte == 0xA1 then
+          state = :address_marker1
+puts idx
+        end
+      when :address_marker1 then
+        if byte == 0xA1 then
+          state = :address_marker2
+        else
+          state = :marker_search
+        end
+      when :address_marker2 then
+        if byte == 0xA1 then
+          state = :address_marker3
+        else
+          state = :marker_search
+        end
+      when :address_marker3 then
+        if byte == 0xFE then
+          state = :address_marker_found
+        else
+          state = :marker_search
+        end
+      end
+
+      idx += 1
+      
+    end
+    
+  end
+
   def debug(msg_level)
     return if msg_level > @debuglevel
     msg = yield
     puts(msg) if msg
   end
 
-  # Method for saving track as wav for reviewing it in a sound editor
-  def save_track_as_wav(arr, filename)
-    @buffer = Buffer.new([ ], Format.new(:mono, :pcm_16, 22050))
-    val = 30000
-    arr.each_with_index { |v, i|
-      (v/5).to_i.times { @buffer.samples << ((i.even?) ? 30000 : -30000 ) }
-    }
-
-    Writer.new(filename, Format.new(:mono, :pcm_8, 22050)) { |writer| writer.write(@buffer) }
-  end
-
-
 end
 
-# f = FddReader.new('trk00.0.raw'); f.read_track
+# f = FddReader.new('trk00.0.raw'); arr = f.read_track; stream = f.fluxes2bitstream(f.track_array[1])
