@@ -5,8 +5,7 @@ require 'mfm_track'
 
 # Read data from track flux file produced by KryoFlux -- https://www.kryoflux.com/
 
-class FddReader
-  attr_accessor :track_array
+class KryoFluxReader
 
   def initialize(filename, debuglevel = 0)
     @debuglevel = debuglevel
@@ -23,7 +22,7 @@ class FddReader
   # Take track file from KryoFlux and convert it to array of track images (arrays of flux lengths).
   # Each item in the track image array corresponds to a single rotation of the floppy disk.
   # Each track image may slightly differ due to hardware issues. We'll look into that later.
-  def read_track
+  def convert_track
     File.open(@filename, "rb") { |f| @stream = f.read.bytes }
 
     @track = MfmTrack.new
@@ -158,50 +157,6 @@ class FddReader
     dword
   end
 
-  # ==================== Interpret fluxes as MFM encoded bits ==================== #
-
-  def parse_bitstream(bitstream)
-    state = :marker_search
-    idx = 0
-    byte = 0
-
-    loop do
-
-      case state
-      when :marker_search then
-        bit = bitstream[idx].to_i
-        byte = (byte << 1) | bit
-
-        if byte == 0xA1 then
-          state = :address_marker1
-puts idx
-        end
-      when :address_marker1 then
-        if byte == 0xA1 then
-          state = :address_marker2
-        else
-          state = :marker_search
-        end
-      when :address_marker2 then
-        if byte == 0xA1 then
-          state = :address_marker3
-        else
-          state = :marker_search
-        end
-      when :address_marker3 then
-        if byte == 0xFE then
-          state = :address_marker_found
-        else
-          state = :marker_search
-        end
-      end
-
-      idx += 1
-      
-    end
-    
-  end
-
   def debug(msg_level)
     return if msg_level > @debuglevel
     msg = yield
@@ -210,4 +165,4 @@ puts idx
 
 end
 
-# f = FddReader.new('trk00.0.raw'); arr = f.read_track; stream = f.fluxes2bitstream(f.track_array[1])
+# f = KryoFluxReader.new('trk00.0.raw'); track = f.convert_track
