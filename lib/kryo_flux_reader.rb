@@ -150,11 +150,23 @@ class KryoFluxReader
 
   def read_dword
     dword = @stream[@file_position] |
-             (@stream[@file_position+1] << 8) |
-             (@stream[@file_position+2] << 16) |
-             (@stream[@file_position+3] << 24)
+             (@stream[@file_position + 1] << 8) |
+             (@stream[@file_position + 2] << 16) |
+             (@stream[@file_position + 3] << 24)
     @file_position += 4
     dword
+  end
+
+  def self.convert_disk(dir, debuglevel = 0)
+    full_path = Pathname.new(dir).realpath
+    pattern = full_path.join("*.raw")
+
+    Dir.glob(pattern).sort.each { |filename|
+      debug(1) { "Processing: #{filename}" }
+      track = self.new(filename, debuglevel).convert_track
+      track.scan_track
+      track.save(filename)
+    }
   end
 
   def debug(msg_level)
@@ -166,3 +178,4 @@ class KryoFluxReader
 end
 
 # f = KryoFluxReader.new('trk00.0.raw'); track = f.convert_track
+# KryoFluxReader::convert_disk('text1')

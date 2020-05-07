@@ -40,7 +40,14 @@ class MfmTrack
   end
 
   def save(filename)
-    File.open("%s.%02u.%s.trk" % [filename, self.track_no, side_code(self.side) ], "wb") { |f|
+    pathname = Pathname.new(filename).realpath
+    path = pathname.dirname
+    fn = Pathname.new(path).basename
+
+    out_fn = "%s.%02u.%s.trk" % [ fn, self.track_no, side_code(self.side) ]
+    out_path = Pathname.new(path).join(out_fn)
+
+    File.open(out_path, "wb") { |f|
       @revolutions.each_with_index { |revolution, rev_no|
         f.puts "-----[#{rev_no}]"
         revolution.each_with_index { |flux, idx|
@@ -112,11 +119,12 @@ class MfmTrack
   def find_marker(ptr = 0)
     sync_pulse_length = determine_sync_pulse_length
 
-    str = "0000"    
+    stream = '-' * 15
 
     flux = 0
-    until flux.nil? do
+    loop do
       flux = revolutions[@revolution_to_analyze][ptr]
+      break if flux.nil?
       flux = flux.round(1)
 
       pulse = case flux
@@ -124,15 +132,21 @@ class MfmTrack
                 "4"
               when ((sync_pulse_length * 1.25) .. (sync_pulse_length * 1.75)) then
                 "3"
+              when ((sync_pulse_length * 0.75) .. (sync_pulse_length * 1.25)) then
+                "2"
               else
                 "*"
               end
 
-      str = str[1..3] + pulse
+      stream = stream[1..14] + pulse
 
-      if str == "4343" then
-        debug(10) { "Magic sequence found @ #{ptr - 4}" }
-        return ptr - 4
+      if stream[11..15] == "4343" then
+        debug(15) { "Magic word found @ ".green + (ptr - 4).to_s.white.bold }
+      end
+
+      if stream == "434324343243432" then
+        debug(10) { "Magic sequence found @ ".green.bold + (ptr - 15).to_s.white.bold }
+        return ptr - 15
       end
 
       ptr += 1
@@ -150,7 +164,8 @@ class MfmTrack
     flux = revolutions[@revolution_to_analyze][ptr]
     ptr += 1
 
-    until flux.nil? do
+    loop do
+      break if flux.nil?
       flux = flux.round(1)
       debug(20) { "Current flux length: #{flux}" }
 
@@ -184,25 +199,44 @@ class MfmTrack
         flux = flux - (sync_pulse_length / 2)
       end
 
-      break if len && (bitstream.size == (len * 8 + 1)) 
+      break if len && (bitstream.size == (len * 8 + 1))
     end
 
-    [ ptr, bitstream  ]
+    if flux then
+      return [ ptr, bitstream  ]
+    else
+      return nil
+    end
   end
+
+  def expect_byte(no, expected, actual)
+    if actual != expected then
+      debug(15) { "Byte #".red + no.to_s.white.bold + ": Expected ".red + expected.white.bold + ", got ".red + actual.white.bold }
+      return false
+    else
+      return true
+    end
+  end
+
 
   def read_sector_header(ptr)
     debug(15) { "--- Reading sector header".yellow }
     ptr = find_marker(ptr)
+
+    if ptr.nil? then# End of track
+      return nil
+    end
+
     ptr, bitstream = read_mfm(ptr, 4 + 4 + 2)
     header = bitstream[1..-1].unpack "A8A8A8A8A8A8A8A8A8A8"
 
     debug(20) { "* Raw header data: #{header.inspect}" }
 
-    return if header.shift != '10100o01'
-    return if header.shift != '10100o01'
-    return if header.shift != '10100o01'
+    return [ ptr, nil ] unless expect_byte(1, '10100o01', header.shift)
+    return [ ptr, nil ] unless expect_byte(2, '10100o01', header.shift)
+    return [ ptr, nil ] unless expect_byte(3, '10100o01', header.shift)
+    return [ ptr, nil ] unless expect_byte(4, '11111110', header.shift)
     header.map! { |b| b.to_i(2) }
-    return if header.shift != 0xfe
 
     b0 = header.pop
     b1 = header.pop
@@ -216,12 +250,12 @@ class MfmTrack
     sector_size_code = header.shift
 
     debug(1) { "Sector header:" }
-    debug(1) { "  * Track:             ".blue.bold + track_read.to_s.bold }
-    debug(1) { "  * Side:              ".blue.bold + side_read.to_s.bold }
-    debug(1) { "  * Sector #:          ".blue.bold + sector_no.to_s.bold }
-    debug(1) { "  * Sector size:       ".blue.bold + sector_size_code.to_s.bold }
-    debug(1) { "  * Read checksum:     #{read_checksum.to_s.bold}" }
-    debug(1) { "  * Computed checksum: #{computed_checksum.to_s.bold}" }
+    debug(2) { "  * Track:             ".blue.bold + track_read.to_s.bold }
+    debug(2) { "  * Side:              ".blue.bold + side_read.to_s.bold }
+    debug(2) { "  * Sector #:          ".blue.bold + sector_no.to_s.bold }
+    debug(3) { "  * Sector size:       ".blue.bold + sector_size_code.to_s.bold }
+    debug(5) { "  * Read checksum:     #{read_checksum.to_s.bold}" }
+    debug(5) { "  * Computed checksum: #{computed_checksum.to_s.bold}" }
     debug(1) { "  * Header checksum:   #{(read_checksum == computed_checksum) ? 'success'.green : 'failed'.red }" }
 
     if read_checksum == computed_checksum then
@@ -247,10 +281,10 @@ class MfmTrack
     ptr, bitstream = read_mfm(ptr, 4 + 512 + 2)
     sector = bitstream[1..-1].unpack "A8A8A8A8A4096A8A8"
 
-    return if sector.shift != '10100o01'
-    return if sector.shift != '10100o01'
-    return if sector.shift != '10100o01'
-    return if sector.shift.to_i(2) != 0xfb
+    return [ ptr, nil ] unless expect_byte(1, '10100o01', sector.shift)
+    return [ ptr, nil ] unless expect_byte(2, '10100o01', sector.shift)
+    return [ ptr, nil ] unless expect_byte(3, '10100o01', sector.shift)
+    return [ ptr, nil ] unless expect_byte(4, '11111011', sector.shift)
 
     data = sector.shift.scan(/\d{8}/).map! { |b| b.to_i(2) }
 
@@ -261,22 +295,39 @@ class MfmTrack
     computed_checksum = crc_ccitt([0xa1, 0xa1, 0xa1, 0xfb] + data)
 
     debug(1) { "Sector data:" }
-    debug(1) { "  * Read checksum:     #{read_checksum.to_s.bold}" }
-    debug(1) { "  * Computed checksum: #{computed_checksum.to_s.bold}" }
+    debug(5) { "  * Read checksum:     #{read_checksum.to_s.bold}" }
+    debug(5) { "  * Computed checksum: #{computed_checksum.to_s.bold}" }
     debug(1) { "  * Data checksum:     #{(read_checksum == computed_checksum) ? 'success'.green : 'failed'.red }" }
 
     [ ptr, data ]
   end
 
+  def scan_track
+    # Read just the sector headers
+    ptr = 0
+
+    loop {
+      data = read_sector_header(ptr)
+      break if data.nil?
+      ptr, track, side, sector = data
+    }
+  end
+
   def read_track
     ptr = 0
+    data_hash = {}
 
     10.times {
       ptr, track, side, sector = read_sector_header(ptr)
       ptr, data = read_sector_data(ptr)
+      data_hash[sector] = data
     }
+
+    debug(2) { "Total sectors read: ".green + data_hash.to_a.count{ |pair| !pair.last.nil? }.to_s.white.bold }
+
+    return data_hash
   end
-    
+
   def debug(msg_level)
     return if msg_level > @debuglevel
     msg = yield
@@ -284,7 +335,7 @@ class MfmTrack
   end
 
   def crc_ccitt(byte_array)
-    crc = 0xffff;
+    crc = 0xffff
 
     byte_array.each { |b|
       crc ^= (b << 8)
@@ -294,9 +345,7 @@ class MfmTrack
     return crc & 0xffff
   end
 
-
 end
 
 # track = MfmTrack.load("track001...trk")
 # f  = FddReader.new "", 10
-# f.fluxes2bitstream track, 1
