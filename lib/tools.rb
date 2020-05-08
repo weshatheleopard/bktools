@@ -29,6 +29,10 @@ module Tools
     ('000' + b.to_s(8))[-3..-1]
   end
 
+  def self.zeropad(v, n)
+    ('0' * n + v)[-n..-1]
+  end
+
   def self.string_to_byte_array(str)
     str.each_byte.collect { |x| x }
   end

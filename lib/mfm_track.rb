@@ -218,7 +218,6 @@ class MfmTrack
     end
   end
 
-
   def read_sector_header(ptr)
     debug(15) { "--- Reading sector header".yellow }
     ptr = find_marker(ptr)
@@ -254,9 +253,9 @@ class MfmTrack
     debug(2) { "  * Side:              ".blue.bold + side_read.to_s.bold }
     debug(2) { "  * Sector #:          ".blue.bold + sector_no.to_s.bold }
     debug(3) { "  * Sector size:       ".blue.bold + sector_size_code.to_s.bold }
-    debug(5) { "  * Read checksum:     #{read_checksum.to_s.bold}" }
-    debug(5) { "  * Computed checksum: #{computed_checksum.to_s.bold}" }
-    debug(1) { "  * Header checksum:   #{(read_checksum == computed_checksum) ? 'success'.green : 'failed'.red }" }
+    debug(5) { "  * Read checksum:     " + Tools::zeropad(read_checksum.to_s(2), 16).bold }
+    debug(5) { "  * Computed checksum: " + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
+    debug(1) { "  * Header checksum:   " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
 
     if read_checksum == computed_checksum then
       if self.track_no.nil? then
@@ -293,11 +292,12 @@ class MfmTrack
 
     read_checksum = Tools::bytes2word(b0, b1)
     computed_checksum = crc_ccitt([0xa1, 0xa1, 0xa1, 0xfb] + data)
+    data = nil if read_checksum != computed_checksum
 
     debug(1) { "Sector data:" }
-    debug(5) { "  * Read checksum:     #{read_checksum.to_s.bold}" }
-    debug(5) { "  * Computed checksum: #{computed_checksum.to_s.bold}" }
-    debug(1) { "  * Data checksum:     #{(read_checksum == computed_checksum) ? 'success'.green : 'failed'.red }" }
+    debug(5) { "  * Read checksum:     " + Tools::zeropad(read_checksum.to_s(2), 16).bold }
+    debug(5) { "  * Computed checksum: " + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
+    debug(1) { "  * Header checksum:   " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
 
     [ ptr, data ]
   end
