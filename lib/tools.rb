@@ -65,4 +65,8 @@ module Tools
     end
   end
 
+  def self.byte2char(byte)
+    (byte < 32) ? '.' : byte.chr
+  end
+
 end

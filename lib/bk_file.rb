@@ -29,10 +29,6 @@ class BkFile
     char_str = ''
   end
 
-  def ch(byte)
-    (byte < 32) ? '.' : byte.chr
-  end
-
   def display(options = {})
     puts "File name:     [#{(name + ' ' * 16)[0...16]}]"
     puts "Start address: #{Tools::octal(self.start_address)}"
@@ -50,14 +46,14 @@ class BkFile
       string_start_addr = start_address - 1
       string_counter = 2
       data_str = data_str + "   #{Tools::octal_byte(body[0])} "
-      char_str += ' ' + ch(body[0])
+      char_str += ' ' + Tools::byte2char(body[0])
       i = 1
     end
 
     while (i < length) do
       byte = body[i]
 
-      char_str << ch(byte)
+      char_str << Tools::byte2char(byte)
 
       if b0.nil? then
         b0 = byte

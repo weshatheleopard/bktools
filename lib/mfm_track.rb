@@ -40,9 +40,8 @@ class MfmTrack
   end
 
   def save(filename)
-    pathname = Pathname.new(filename).realpath
-    path = pathname.dirname
-    fn = Pathname.new(path).basename
+    path = Pathname.new(filename).dirname.realpath
+    fn = Pathname.new(filename).basename
 
     out_fn = "%s.%02u.%s.trk" % [ fn, self.track_no, side_code(self.side) ]
     out_path = Pathname.new(path).join(out_fn)
@@ -159,7 +158,7 @@ class MfmTrack
     bitstream = ''
     sync_pulse_length = determine_sync_pulse_length
 
-    debug(15) { "Sync pulse length = #{sync_pulse_length}" }
+    debug(18) { "Sync pulse length = #{sync_pulse_length}" }
 
     flux = revolutions[@revolution_to_analyze][ptr]
     ptr += 1
@@ -199,7 +198,7 @@ class MfmTrack
         flux = flux - (sync_pulse_length / 2)
       end
 
-      break if len && (bitstream.size == (len * 8 + 1))
+      break if len && (bitstream.size >= (len * 8 + 1))
     end
 
     if flux then
@@ -222,9 +221,7 @@ class MfmTrack
     debug(15) { "--- Reading sector header".yellow }
     ptr = find_marker(ptr)
 
-    if ptr.nil? then# End of track
-      return nil
-    end
+    return nil if ptr.nil? # End of track
 
     ptr, bitstream = read_mfm(ptr, 4 + 4 + 2)
     header = bitstream[1..-1].unpack "A8A8A8A8A8A8A8A8A8A8"
@@ -253,8 +250,8 @@ class MfmTrack
     debug(2) { "  * Side:              ".blue.bold + side_read.to_s.bold }
     debug(2) { "  * Sector #:          ".blue.bold + sector_no.to_s.bold }
     debug(3) { "  * Sector size:       ".blue.bold + sector_size_code.to_s.bold }
-    debug(5) { "  * Read checksum:     " + Tools::zeropad(read_checksum.to_s(2), 16).bold }
     debug(5) { "  * Computed checksum: " + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
+    debug(5) { "  * Read checksum:     " + Tools::zeropad(read_checksum.to_s(2), 16).bold }
     debug(1) { "  * Header checksum:   " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
 
     if read_checksum == computed_checksum then
@@ -295,8 +292,8 @@ class MfmTrack
     data = nil if read_checksum != computed_checksum
 
     debug(1) { "Sector data:" }
-    debug(5) { "  * Read checksum:     " + Tools::zeropad(read_checksum.to_s(2), 16).bold }
     debug(5) { "  * Computed checksum: " + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
+    debug(5) { "  * Read checksum:     " + Tools::zeropad(read_checksum.to_s(2), 16).bold }
     debug(1) { "  * Header checksum:   " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
 
     [ ptr, data ]
@@ -309,7 +306,13 @@ class MfmTrack
     loop {
       data = read_sector_header(ptr)
       break if data.nil?
+      next if data[1].nil?
+
       ptr, track, side, sector = data
+      if ptr.nil? then
+        debug(1) { "---EOF".red }
+        break
+      end
     }
   end
 
@@ -317,11 +320,24 @@ class MfmTrack
     ptr = 0
     data_hash = {}
 
-    10.times {
-      ptr, track, side, sector = read_sector_header(ptr)
-      ptr, data = read_sector_data(ptr)
-      data_hash[sector] = data
-    }
+    loop do
+      if ptr.nil? then
+        debug(1) { "---EOF".red }
+        break
+      end
+
+      ptr, track, side, sector_no = read_sector_header(ptr)
+      next if track.nil?
+
+      if ptr.nil? then
+        debug(1) { "---EOF".red }
+        break
+      end
+
+      sector = DiskSector.new(sector_no)
+      ptr, sector.data = read_sector_data(ptr)
+      data_hash[sector.number] = sector
+    end
 
     debug(2) { "Total sectors read: ".green + data_hash.to_a.count{ |pair| !pair.last.nil? }.to_s.white.bold }
 
