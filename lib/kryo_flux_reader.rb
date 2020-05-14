@@ -162,9 +162,10 @@ class KryoFluxReader
     pattern = full_path.join("*.raw")
 
     Dir.glob(pattern).sort.each { |filename|
-      debug(1) { "Processing: #{filename}" }
-      track = self.new(filename, debuglevel).convert_track
-      track.scan_track
+      reader = self.new(filename, debuglevel)
+      reader.debug(debuglevel) { "Processing: #{filename}" }
+      track = reader.convert_track
+      track.scan_track(1)
       track.save(filename)
     }
   end
@@ -178,4 +179,4 @@ class KryoFluxReader
 end
 
 # f = KryoFluxReader.new('trk00.0.raw'); track = f.convert_track
-# KryoFluxReader::convert_disk('text1')
+# KryoFluxReader::convert_disk('text1', 1)

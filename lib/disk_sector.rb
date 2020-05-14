@@ -1,9 +1,11 @@
 class DiskSector
   attr_accessor :data
   attr_reader :number
+  attr_reader :size_code
 
-  def initialize(number)
+  def initialize(number, size_code)
     @number = number
+    @size_code = size_code
     @data = []
   end
 

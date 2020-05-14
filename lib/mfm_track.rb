@@ -1,15 +1,17 @@
 require 'wavefile'
 include WaveFile
 
+# TODO: read multiple revolutions and collect sectors that read well
+
 class MfmTrack
   attr_reader :revolutions
-  attr_accessor :track_no, :side, :revolution_to_analyze
+  attr_accessor :track_no, :side
 
   def initialize(debuglevel = 0)
     @debuglevel = debuglevel
     @revolutions = []
-    @revolution_to_analyze = 1 # Revolution #0 tends to be incomplete
     @track_no = @side = nil
+    @sync_pulse_lengths = []
   end
 
   def side_code(bit)
@@ -57,12 +59,14 @@ class MfmTrack
     }
   end
 
-  def analyze
-    sync_pulse_length = determine_sync_pulse_length
+  def analyze(start = nil, len = nil, revolution_to_analyze = 1)
+    sync_pulse_length = determine_sync_pulse_length(revolution_to_analyze)
 
     @revolutions.each_with_index { |revolution, rev_no|
       puts "-----[#{rev_no}]".yellow
-      revolution.each_with_index { |flux, idx|
+
+      revolution&.each_with_index { |flux, idx|
+        next if (start && (idx < start)) || (len && (idx > start + len))
         s = "%4i # %07i" % [ flux, idx ]
 
         # Magic = 43431, where 1 = sync length
@@ -85,7 +89,7 @@ class MfmTrack
     idx = nil
 
     File.readlines(filename).each { |line|
-      if line =~ /^-----\[(\d+)\]$/ then
+      if line =~ /^-----\[(\d+)\]\s*$/ then
         idx && track.revolutions[idx] = current_revolution
         current_revolution = []
         idx = $1.to_i
@@ -99,30 +103,35 @@ class MfmTrack
   end
 
   # Track starts with a bun
-  def determine_sync_pulse_length
-    return if @revolutions[@revolution_to_analyze].nil?
-    return @sync_pulse_length if @sync_pulse_length
+  def determine_sync_pulse_length(revolution_to_analyze)
+    return if @revolutions[revolution_to_analyze].nil?
+    sync_pulse_length = @sync_pulse_lengths[revolution_to_analyze]
+    return sync_pulse_length if sync_pulse_length
 
     sum = counter = sync_pulse_length = 0
 
-    revolutions[@revolution_to_analyze].each_with_index { |flux, i|
+    revolutions[revolution_to_analyze].each_with_index { |flux, i|
       sum += flux
       sync_pulse_length = sum.to_f / (i + 1)
 
       break if (i > 1) && (((flux / sync_pulse_length) - 1).abs > 0.15) # The speed detection run is done
     }
 
-    @sync_pulse_length = sync_pulse_length.round(2)
+    @sync_pulse_lengths[revolution_to_analyze] = sync_pulse_length.round(2)
   end
 
-  def find_marker(ptr = 0)
-    sync_pulse_length = determine_sync_pulse_length
+  def find_marker(ptr, revolution_to_analyze, max_distance = nil)
+    sync_pulse_length = determine_sync_pulse_length(revolution_to_analyze)
+    current_revolution = revolutions[revolution_to_analyze]
+    endptr = nil
+    endptr = ptr + max_distance if max_distance
 
     stream = '-' * 15
 
     flux = 0
     loop do
-      flux = revolutions[@revolution_to_analyze][ptr]
+      break if endptr && (endptr < ptr)
+      flux = current_revolution[ptr]
       break if flux.nil?
       flux = flux.round(1)
 
@@ -154,24 +163,25 @@ class MfmTrack
     return nil
   end
 
-  def read_mfm(ptr, len = nil)
+  def read_mfm(ptr, len, revolution_to_analyze)
+    current_revolution = revolutions[revolution_to_analyze]
     bitstream = ''
-    sync_pulse_length = determine_sync_pulse_length
+    sync_pulse_length = determine_sync_pulse_length(revolution_to_analyze)
 
     debug(18) { "Sync pulse length = #{sync_pulse_length}" }
 
-    flux = revolutions[@revolution_to_analyze][ptr]
+    flux = current_revolution[ptr]
     ptr += 1
 
     loop do
       break if flux.nil?
       flux = flux.round(1)
-      debug(20) { "Current flux length: #{flux}" }
+      debug(20) { "Flux @ #{ptr}: #{flux}" }
 
       if flux > (sync_pulse_length * 1.75) then # Special case - synhro A1 (10100O01)
         debug(30) { "[" + "0o".bold + "] Current flux > 7/4 sync pulse. Special case of sector marker." }
         bitstream << '0o'
-        flux = revolutions[@revolution_to_analyze][ptr]
+        flux = current_revolution[ptr]
         debug(30) { "     Next flux read: #{flux}".yellow }
         ptr += 1
       elsif flux > sync_pulse_length then
@@ -181,18 +191,18 @@ class MfmTrack
       elsif flux > (sync_pulse_length * 0.75) then
         debug(30) { "[" + "0".bold + "]  Current flux between 3/4 and 1 sync pulse, stretching it to full." }
         bitstream << '0'
-        flux = revolutions[@revolution_to_analyze][ptr]
+        flux = current_revolution[ptr]
         debug(30) { "     Next flux read: #{flux}".yellow }
         ptr += 1
       elsif flux < (sync_pulse_length * 0.25) then # Tiny reminder of previous flux
         debug(30) { "     Current flux less than 1/4 sync pulse, considering it a remainder of a previous flux" }
-        flux = revolutions[@revolution_to_analyze][ptr]
+        flux = current_revolution[ptr]
         debug(30) { "     Next flux read: #{flux}".yellow }
         ptr += 1
       else
         debug(30) { "[" + "1".bold + "]  Current flux between 1/4 and 3/4 sync pulse." }
         bitstream << '1'
-        flux = revolutions[@revolution_to_analyze][ptr]
+        flux = current_revolution[ptr]
         debug(30) { "     Next flux read: #{flux}".yellow }
         ptr += 1
         flux = flux - (sync_pulse_length / 2)
@@ -217,13 +227,13 @@ class MfmTrack
     end
   end
 
-  def read_sector_header(ptr)
+  def read_sector_header(ptr, revolution_to_analyze)
     debug(15) { "--- Reading sector header".yellow }
-    ptr = find_marker(ptr)
+    ptr = find_marker(ptr, revolution_to_analyze)
 
     return nil if ptr.nil? # End of track
 
-    ptr, bitstream = read_mfm(ptr, 4 + 4 + 2)
+    ptr, bitstream = read_mfm(ptr, 4 + 4 + 2, revolution_to_analyze)
     header = bitstream[1..-1].unpack "A8A8A8A8A8A8A8A8A8A8"
 
     debug(20) { "* Raw header data: #{header.inspect}" }
@@ -271,10 +281,12 @@ class MfmTrack
     [ ptr, track_read, side_read, sector_no, sector_size_code ]
   end
 
-  def read_sector_data(ptr)
+  def read_sector_data(ptr, revolution_to_analyze)
     debug(15) { "--- Reading sector data".yellow }
-    ptr = find_marker(ptr)
-    ptr, bitstream = read_mfm(ptr, 4 + 512 + 2)
+    ptr = find_marker(ptr, revolution_to_analyze, 400)
+    return nil if ptr.nil?
+
+    ptr, bitstream = read_mfm(ptr, 4 + 512 + 2, revolution_to_analyze)
     sector = bitstream[1..-1].unpack "A8A8A8A8A4096A8A8"
 
     return [ ptr, nil ] unless expect_byte(1, '10100o01', sector.shift)
@@ -289,26 +301,26 @@ class MfmTrack
 
     read_checksum = Tools::bytes2word(b0, b1)
     computed_checksum = crc_ccitt([0xa1, 0xa1, 0xa1, 0xfb] + data)
-    data = nil if read_checksum != computed_checksum
 
     debug(1) { "Sector data:" }
     debug(5) { "  * Computed checksum: " + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
     debug(5) { "  * Read checksum:     " + Tools::zeropad(read_checksum.to_s(2), 16).bold }
     debug(1) { "  * Header checksum:   " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
 
-    [ ptr, data ]
+    [ ptr, data, read_checksum == computed_checksum ]
   end
 
-  def scan_track
+  def scan_track(revolution_to_analyze)
     # Read just the sector headers
     ptr = 0
 
     loop {
-      data = read_sector_header(ptr)
+      data = read_sector_header(ptr, revolution_to_analyze)
       break if data.nil?
-      next if data[1].nil?
 
       ptr, track, side, sector = data
+      next if track.nil?
+
       if ptr.nil? then
         debug(1) { "---EOF".red }
         break
@@ -316,7 +328,7 @@ class MfmTrack
     }
   end
 
-  def read_track
+  def read_revolution(revolution_to_analyze = 1, keep_bad_data = false)
     ptr = 0
     data_hash = {}
 
@@ -326,7 +338,7 @@ class MfmTrack
         break
       end
 
-      ptr, track, side, sector_no = read_sector_header(ptr)
+      ptr, track, side, sector_no, sector_size_code = read_sector_header(ptr, revolution_to_analyze)
       next if track.nil?
 
       if ptr.nil? then
@@ -334,14 +346,32 @@ class MfmTrack
         break
       end
 
-      sector = DiskSector.new(sector_no)
-      ptr, sector.data = read_sector_data(ptr)
-      data_hash[sector.number] = sector
+      sector = DiskSector.new(sector_no, sector_size_code)
+      ptr, sector.data, crc_matched = read_sector_data(ptr, revolution_to_analyze)
+      data_hash[sector.number] = sector if crc_matched || keep_bad_data
     end
 
-    debug(2) { "Total sectors read: ".green + data_hash.to_a.count{ |pair| !pair.last.nil? }.to_s.white.bold }
+    debug(8) { "Revolution #".green + revolution_to_analyze.to_s.white.bold +
+                 ": sectors read: ".green + data_hash.to_a.count{ |pair| !pair.last.nil? }.to_s.white.bold }
 
     return data_hash
+  end
+
+  def read_track()
+    all_sectors = {}
+
+    (1..revolutions.size).each do |rev|
+      next if revolutions[rev].nil?
+      debug(3) { "-----Reading revolution #".yellow + rev.to_s.white.bold + " -----------------------------------".yellow }
+      rev_sectors = read_revolution(rev)
+      rev_sectors.each_pair { |idx, sector|
+        all_sectors[sector.number] = sector if all_sectors[sector.number].nil?
+      }
+    end
+
+    debug(3) { "Track #".green + track_no.to_s.white.bold +
+                ": total sectors read: ".green + all_sectors.to_a.count{ |pair| !pair.last.nil? }.to_s.white.bold }
+    all_sectors
   end
 
   def debug(msg_level)
@@ -364,4 +394,4 @@ class MfmTrack
 end
 
 # track = MfmTrack.load("track001...trk")
-# f  = FddReader.new "", 10
+
