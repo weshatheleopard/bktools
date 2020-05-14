@@ -163,7 +163,7 @@ class KryoFluxReader
 
     Dir.glob(pattern).sort.each { |filename|
       reader = self.new(filename, debuglevel)
-      reader.debug(debuglevel) { "Processing: #{filename}" }
+      reader.debug(debuglevel) { "Processing: #{filename}".yellow }
       track = reader.convert_track
       track.scan_track(1)
       track.save(filename)
