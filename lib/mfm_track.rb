@@ -110,14 +110,21 @@ class MfmTrack
 
     sum = counter = sync_pulse_length = 0
 
+    current_idx = nil
+
     revolutions[revolution_to_analyze].each_with_index { |flux, i|
+      current_idx = i
       sum += flux
       sync_pulse_length = sum.to_f / (i + 1)
 
       break if (i > 1) && (((flux / sync_pulse_length) - 1).abs > 0.15) # The speed detection run is done
     }
 
-    @sync_pulse_lengths[revolution_to_analyze] = sync_pulse_length.round(2)
+    sync_pulse_length = sync_pulse_length.round(1)
+
+    debug(15) { "Sync pulse length determined to be " + sync_pulse_length.to_s.white + " @ ".green + current_idx.to_s.white.bold }
+
+    @sync_pulse_lengths[revolution_to_analyze] = sync_pulse_length
   end
 
   def find_marker(ptr, revolution_to_analyze, max_distance = nil)
