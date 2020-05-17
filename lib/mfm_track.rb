@@ -5,13 +5,14 @@ include WaveFile
 
 class MfmTrack
   attr_reader :revolutions
-  attr_accessor :track_no, :side
+  attr_accessor :track_no, :side, :sectors
 
   def initialize(debuglevel = 0)
     @debuglevel = debuglevel
     @revolutions = []
     @track_no = @side = nil
     @sync_pulse_lengths = []
+    @sectors = {}
   end
 
   def side_code(bit)
@@ -312,7 +313,7 @@ class MfmTrack
     debug(1) { "Sector data:" }
     debug(5) { "  * Computed checksum: " + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
     debug(5) { "  * Read checksum:     " + Tools::zeropad(read_checksum.to_s(2), 16).bold }
-    debug(1) { "  * Header checksum:   " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
+    debug(1) { "  * Data checksum:   " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
 
     [ ptr, data, read_checksum == computed_checksum ]
   end
@@ -365,20 +366,18 @@ class MfmTrack
   end
 
   def read_track()
-    all_sectors = {}
-
     (1..revolutions.size).each do |rev|
       next if revolutions[rev].nil?
       debug(3) { "-----Reading revolution #".yellow + rev.to_s.white.bold + " -----------------------------------".yellow }
       rev_sectors = read_revolution(rev)
       rev_sectors.each_pair { |idx, sector|
-        all_sectors[sector.number] = sector if all_sectors[sector.number].nil?
+        sectors[sector.number] = sector if sectors[sector.number].nil?
       }
     end
 
     debug(3) { "Track #".green + track_no.to_s.white.bold +
-                ": total sectors read: ".green + all_sectors.to_a.count{ |pair| !pair.last.nil? }.to_s.white.bold }
-    all_sectors
+                ": total sectors read: ".green + sectors.to_a.count{ |pair| !pair.last.nil? }.to_s.white.bold }
+    sectors
   end
 
   def debug(msg_level)
