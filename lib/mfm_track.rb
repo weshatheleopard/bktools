@@ -29,7 +29,6 @@ class MfmTrack
   # Method for saving track as wav for reviewing it in a sound editor
   def save_as_wav(filename)
     @revolutions.each_with_index { |revolution, rev_no|
-
       @buffer = Buffer.new([ ], Format.new(:mono, :pcm_16, SOUND_FREQUENCY))
       val = 30000
       revolution.each_with_index { |v, i|
@@ -46,12 +45,14 @@ class MfmTrack
     path = Pathname.new(filename).dirname.realpath
     fn = Pathname.new(filename).basename
 
-    out_fn = "%s.%02u.%s.trk" % [ fn, self.track_no, side_code(self.side) ]
+    out_fn = fn.to_s + "." + (self.track_no ? ("%02d" % self.track_no) : '_') + "." + side_code(self.side) + ".trk"
     out_path = Pathname.new(path).join(out_fn)
 
     File.open(out_path, "wb") { |f|
       @revolutions.each_with_index { |revolution, rev_no|
+        next if revolution.nil?
         f.puts "-----[#{rev_no}]"
+
         revolution.each_with_index { |flux, idx|
           f.puts "%4i # %05i" % [ flux, idx ]
         }
@@ -171,7 +172,7 @@ class MfmTrack
     return nil
   end
 
-  def read_mfm(ptr, len, revolution_to_analyze)
+  def read_mfm(ptr, len, revolution_to_analyze, start_state = nil)
     current_revolution = revolutions[revolution_to_analyze]
     bitstream = ''
     sync_pulse_length = determine_sync_pulse_length(revolution_to_analyze)
@@ -179,6 +180,13 @@ class MfmTrack
     debug(18) { "Sync pulse length = #{sync_pulse_length}" }
 
     flux = current_revolution[ptr]
+
+    # If start state is not specified, we assume reading starts at the marker, which is preceded by a zero bit,
+    # and that means pre-marker impulse oughtta be 1.5x
+    if (start_state.nil? && (flux < (sync_pulse_length * 1.25)) || (start_state == 1)) then
+      flux = flux + (sync_pulse_length / 2)
+    end
+
     ptr += 1
 
     loop do
@@ -400,4 +408,3 @@ class MfmTrack
 end
 
 # track = MfmTrack.load("track001...trk")
-
