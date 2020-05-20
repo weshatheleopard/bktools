@@ -62,14 +62,13 @@ class KryoFluxReader
     end
 
     # All fluxes are now in @flux_hash, all index data in @indices_array
-    revolution_array = []
-    @flux_hash.keys.sort.each { |pos|
-      if @indices_array.include?(pos) # Index
-        @track.revolutions << revolution_array
-        revolution_array = []
-      end
 
-      revolution_array << @flux_hash[pos]
+    @track.fluxes = []
+    @flux_hash.keys.sort.each { |pos|
+      @track.fluxes << @flux_hash[pos]
+      if @indices_array.include?(pos) then
+        @track.indices << @track.fluxes.size
+      end
     }
 
     @track
@@ -165,7 +164,7 @@ class KryoFluxReader
       reader = self.new(filename, debuglevel)
       reader.debug(debuglevel) { "Processing: #{filename}".yellow }
       track = reader.convert_track
-      track.scan_track(1)
+      track.scan_track
       track.save(filename)
     }
   end

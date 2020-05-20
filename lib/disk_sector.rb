@@ -9,6 +9,15 @@ class DiskSector
     @data = []
   end
 
+  def size
+    case @size_code
+    when 1 then 256
+    when 2 then 512
+    when 3 then 1024
+    else nil
+    end
+  end
+
   def display
     b0 = b1 = nil
     data_str = ''

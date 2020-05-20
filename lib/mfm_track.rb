@@ -405,6 +405,11 @@ class MfmTrack
     return crc & 0xffff
   end
 
+  # FIXME: Add handling of different size sectors
+  def is_complete?
+    (1..10).all? { |i| sectors[i] && sectors[i].data.size == sectors[i].size }
+  end
+
 end
 
 # track = MfmTrack.load("track001...trk")
