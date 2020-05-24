@@ -1,17 +1,16 @@
 require 'wavefile'
 include WaveFile
 
-# TODO: read multiple revolutions and collect sectors that read well
-
 class MfmTrack
-  attr_reader :revolutions
   attr_accessor :track_no, :side, :sectors
+  attr_accessor :fluxes, :indices
 
   def initialize(debuglevel = 0)
     @debuglevel = debuglevel
-    @revolutions = []
+    @fluxes = []
+    @indices = []
     @track_no = @side = nil
-    @sync_pulse_lengths = []
+    @sync_pulse_length = nil
     @sectors = {}
   end
 
@@ -28,20 +27,18 @@ class MfmTrack
 
   # Method for saving track as wav for reviewing it in a sound editor
   def save_as_wav(filename)
-    @revolutions.each_with_index { |revolution, rev_no|
-      @buffer = Buffer.new([ ], Format.new(:mono, :pcm_16, SOUND_FREQUENCY))
-      val = 30000
-      revolution.each_with_index { |v, i|
-        round_val = (v.to_f / DIVISOR).to_i
-        round_val = 1 if round_val == 0
-        round_val.times { @buffer.samples << ((i.even?) ? 30000 : -30000 ) }
-      }
-
-      Writer.new("#{filename}.#{rev_no}.wav", Format.new(:mono, :pcm_8, SOUND_FREQUENCY)) { |writer| writer.write(@buffer) }
+    @buffer = Buffer.new([ ], Format.new(:mono, :pcm_16, SOUND_FREQUENCY))
+    val = 30000
+    fluxes.each_with_index { |v, i|
+      round_val = (v.to_f / DIVISOR).to_i
+      round_val = 1 if round_val == 0
+      round_val.times { @buffer.samples << ((i.even?) ? 30000 : -30000 ) }
     }
+
+    Writer.new("#{filename}.wav", Format.new(:mono, :pcm_8, SOUND_FREQUENCY)) { |writer| writer.write(@buffer) }
   end
 
-  def save(filename)
+  def save(filename, max_len = nil)
     path = Pathname.new(filename).dirname.realpath
     fn = Pathname.new(filename).basename
 
@@ -49,142 +46,147 @@ class MfmTrack
     out_path = Pathname.new(path).join(out_fn)
 
     File.open(out_path, "wb") { |f|
-      @revolutions.each_with_index { |revolution, rev_no|
-        next if revolution.nil?
-        f.puts "-----[#{rev_no}]"
-
-        revolution.each_with_index { |flux, idx|
-          f.puts "%4i # %05i" % [ flux, idx ]
-        }
+      fluxes.each_with_index { |flux, pos|
+        idx_no = indices.index(pos)
+        f.puts "-----[#{idx_no + 1}]" if idx_no
+        f.puts "%4i # %05i" % [ flux, pos ]
+        break if max_len && (pos > max_len)
       }
       f.puts "=====END"
     }
   end
 
-  def analyze(start = nil, len = nil, revolution_to_analyze = 1)
-    sync_pulse_length = determine_sync_pulse_length(revolution_to_analyze)
+#FIXME
 
-    @revolutions.each_with_index { |revolution, rev_no|
-      puts "-----[#{rev_no}]".yellow
+=begin
+  def analyze(start = nil, len = nil)
+   sync_pulse_length = determine_sync_pulse_length(0)
 
-      revolution&.each_with_index { |flux, idx|
-        next if (start && (idx < start)) || (len && (idx > start + len))
-        s = "%4i # %07i" % [ flux, idx ]
+    fluxes.each_with_index { |flux, pos|
+      next if (start && (pos < start)) || (len && (pos > start + len))
 
-        # Magic = 43431, where 1 = sync length
-        if flux > (sync_pulse_length * 2.25) then
-          puts s.red.bold
-        elsif flux > (sync_pulse_length * 1.9) then # Special case - synhro A1 (10100O01)
-          puts s.green.bold
-        elsif flux < (sync_pulse_length * 0.75) then
-          puts s.red.bold
-        else
-          puts s.green
-        end
-      }
+   indices.index(pos)
+      idx_no = indices.index(pos)
+      puts "-----[#{idx_no}]".yellow if idx_no
+
+
+      s = "%4i # %07i" % [ flux, pos ]
+
+      # Magic = 43431, where 1 = sync length
+      if flux > (sync_pulse_length * 2.25) then
+        puts s.red.bold
+      elsif flux > (sync_pulse_length * 1.9) then # Special case - synhro A1 (10100O01)
+        puts s.green.bold
+      elsif flux < (sync_pulse_length * 0.75) then
+        puts s.red.bold
+      else
+        puts s.green
+      end
     }
   end
+=end
 
   def self.load(filename, debuglevel = 0)
     track = self.new(debuglevel)
-    current_revolution = []
-    idx = nil
 
     File.readlines(filename).each { |line|
       if line =~ /^-----\[(\d+)\]\s*$/ then
-        idx && track.revolutions[idx] = current_revolution
-        current_revolution = []
-        idx = $1.to_i
+        track.indices << track.fluxes.size
       elsif line =~ /^\s*(\d+)(\s*#.+)?$/ then
-        current_revolution << ($1.to_i)
+        track.fluxes << ($1.to_i)
       end
     }
 
-    idx && track.revolutions[idx] = current_revolution
     track
   end
 
-  # Track starts with a bun
-  def determine_sync_pulse_length(revolution_to_analyze)
-    return if @revolutions[revolution_to_analyze].nil?
-    sync_pulse_length = @sync_pulse_lengths[revolution_to_analyze]
-    return sync_pulse_length if sync_pulse_length
+=begin
+  def determine_sync_pulse_length(current_idx = nil)
+    return @sync_pulse_length if @sync_pulse_length && current_idx.nil?
 
-    sum = counter = sync_pulse_length = 0
+    current_idx ||= 0
+    detected_sync_pulse_length = 99999
+    total_sequence_length = flux_count = 0
 
-    current_idx = nil
-
-    revolutions[revolution_to_analyze].each_with_index { |flux, i|
-      current_idx = i
-      sum += flux
-      sync_pulse_length = sum.to_f / (i + 1)
-
-      break if (i > 1) && (((flux / sync_pulse_length) - 1).abs > 0.15) # The speed detection run is done
-    }
-
-    sync_pulse_length = sync_pulse_length.round(1)
-
-    debug(15) { "Sync pulse length determined to be " + sync_pulse_length.to_s.white + " @ ".green + current_idx.to_s.white.bold }
-
-    @sync_pulse_lengths[revolution_to_analyze] = sync_pulse_length
-  end
-
-  def find_marker(ptr, revolution_to_analyze, max_distance = nil)
-    sync_pulse_length = determine_sync_pulse_length(revolution_to_analyze)
-    current_revolution = revolutions[revolution_to_analyze]
-    endptr = nil
-    endptr = ptr + max_distance if max_distance
-
-    stream = '-' * 15
-
-    flux = 0
     loop do
-      break if endptr && (endptr < ptr)
-      flux = current_revolution[ptr]
-      break if flux.nil?
-      flux = flux.round(1)
+      flux = fluxes[current_idx]
+      current_idx += 1
+      detected_sync_pulse_length = ((total_sequence_length + flux) / (flux_count + 1)).round(1)
 
-      pulse = case flux
-              when ((sync_pulse_length * 1.75) .. (sync_pulse_length * 2.25)) then
-                "4"
-              when ((sync_pulse_length * 1.25) .. (sync_pulse_length * 1.75)) then
-                "3"
-              when ((sync_pulse_length * 0.75) .. (sync_pulse_length * 1.25)) then
-                "2"
-              else
-                "*"
-              end
+      debug(30) { "#{current_idx}: flux length=#{flux}, flux count=#{flux_count}, pulse length=#{detected_sync_pulse_length}".magenta }
 
-      stream = stream[1..14] + pulse
-
-      if stream[11..15] == "4343" then
-        debug(15) { "Magic word found @ ".green + (ptr - 4).to_s.white.bold }
+      # If the difference is < 15% then it's probably a part of the sequence.
+      if (((flux / detected_sync_pulse_length) - 1).abs < 0.15) then
+        total_sequence_length += flux
+        flux_count += 1.0
+      else
+        if flux_count < 20 then  # We've gavered sufficient number of specimen
+          total_sequence_length = flux_count = 0
+        else
+          debug(15) { "Sync pulse length determined to be " + detected_sync_pulse_length.to_s.white + " @ ".green + current_idx.to_s.white.bold }
+          break
+        end
       end
-
-      if stream == "434324343243432" then
-        debug(10) { "Magic sequence found @ ".green.bold + (ptr - 15).to_s.white.bold }
-        return ptr - 15
-      end
-
-      ptr += 1
     end
 
+    @sync_pulse_length = detected_sync_pulse_length
+  end
+=end
+
+  def find_marker(ptr, max_distance = nil)
+    endptr = ptr + max_distance if max_distance
+
+    magic_counter = 0
+
+    loop do
+      break if max_distance && (endptr < ptr)
+
+      marker_candidate = fluxes[(ptr)..(ptr+4)]
+      return(:EOF) if marker_candidate[4].nil?
+
+      sync_pulse_length = (marker_candidate.inject(:+)) / 8.0
+
+      if ((((sync_pulse_length * 1.75) < marker_candidate[0]) && (marker_candidate[0] < (sync_pulse_length * 2.25))) &&
+          (((sync_pulse_length * 1.25) < marker_candidate[1]) && (marker_candidate[1] < (sync_pulse_length * 1.75))) &&
+          (((sync_pulse_length * 1.75) < marker_candidate[2]) && (marker_candidate[2] < (sync_pulse_length * 2.25))) &&
+          (((sync_pulse_length * 1.25) < marker_candidate[3]) && (marker_candidate[3] < (sync_pulse_length * 1.75))) &&
+          (((sync_pulse_length * 0.75) < marker_candidate[4]) && (marker_candidate[4] < (sync_pulse_length * 1.25)))) then
+        debug(15) { "Magic word (#{magic_counter}) found @ ".green + ptr.to_s.white.bold }
+
+        ptr += 5
+        magic_counter +=1
+
+        if magic_counter == 3 then
+          debug(10) { "Magic sequence found @ ".green.bold + (ptr - 15).to_s.white.bold }
+
+          marker = fluxes[(ptr - 15)..(ptr - 1)]
+          @sync_pulse_length = marker.inject(:+) / 24.0
+          debug(15) { "Sync pulse length = #{@sync_pulse_length}".magenta }
+          return(ptr - 16)
+        end
+      else
+        magic_counter = 0
+        ptr +=1
+      end
+    end
     return nil
   end
 
-  def read_mfm(ptr, len, revolution_to_analyze, start_state = nil)
-    current_revolution = revolutions[revolution_to_analyze]
+  def read_mfm(ptr, len, start_state = nil)
     bitstream = ''
-    sync_pulse_length = determine_sync_pulse_length(revolution_to_analyze)
+#    sync_pulse_length = determine_sync_pulse_length(ptr)
 
-    debug(18) { "Sync pulse length = #{sync_pulse_length}" }
 
-    flux = current_revolution[ptr]
+    flux = fluxes[ptr]
 
     # If start state is not specified, we assume reading starts at the marker, which is preceded by a zero bit,
     # and that means pre-marker impulse oughtta be 1.5x
-    if (start_state.nil? && (flux < (sync_pulse_length * 1.25)) || (start_state == 1)) then
-      flux = flux + (sync_pulse_length / 2)
+    if (start_state.nil? && (flux < (@sync_pulse_length * 1.25)) || (start_state == 1)) then
+      debug(15) { "Pre-maker pulse too short (".magenta + flux.to_s.white.bold + ") @".magenta + ptr.to_s.white.bold + ", lengthening".magenta }
+      flux = @sync_pulse_length * 1.5
+    elsif (flux > (@sync_pulse_length * 1.75)) then
+      debug(15) { "Pre-maker pulse too long (".magenta + flux.to_s.white.bold + ") @".magenta + ptr.to_s.white.bold + ", shortening".magenta }
+      flux = @sync_pulse_length * 1.5
     end
 
     ptr += 1
@@ -194,34 +196,34 @@ class MfmTrack
       flux = flux.round(1)
       debug(20) { "Flux @ #{ptr}: #{flux}" }
 
-      if flux > (sync_pulse_length * 1.75) then # Special case - synhro A1 (10100O01)
+      if flux > (@sync_pulse_length * 1.75) then # Special case - synhro A1 (10100O01)
         debug(30) { "[" + "0o".bold + "] Current flux > 7/4 sync pulse. Special case of sector marker." }
         bitstream << '0o'
-        flux = current_revolution[ptr]
+        flux = fluxes[ptr]
         debug(30) { "     Next flux read: #{flux}".yellow }
         ptr += 1
-      elsif flux > sync_pulse_length then
+      elsif flux > @sync_pulse_length then
         debug(30) { "[" + "0".bold + "]  Current flux longer than sync pulse." }
         bitstream << '0'
-        flux = flux - sync_pulse_length
-      elsif flux > (sync_pulse_length * 0.75) then
+        flux = flux - @sync_pulse_length
+      elsif flux > (@sync_pulse_length * 0.75) then
         debug(30) { "[" + "0".bold + "]  Current flux between 3/4 and 1 sync pulse, stretching it to full." }
         bitstream << '0'
-        flux = current_revolution[ptr]
+        flux = fluxes[ptr]
         debug(30) { "     Next flux read: #{flux}".yellow }
         ptr += 1
-      elsif flux < (sync_pulse_length * 0.25) then # Tiny reminder of previous flux
+      elsif flux < (@sync_pulse_length * 0.25) then # Tiny reminder of previous flux
         debug(30) { "     Current flux less than 1/4 sync pulse, considering it a remainder of a previous flux" }
-        flux = current_revolution[ptr]
+        flux = fluxes[ptr]
         debug(30) { "     Next flux read: #{flux}".yellow }
         ptr += 1
       else
         debug(30) { "[" + "1".bold + "]  Current flux between 1/4 and 3/4 sync pulse." }
         bitstream << '1'
-        flux = current_revolution[ptr]
+        flux = fluxes[ptr]
         debug(30) { "     Next flux read: #{flux}".yellow }
         ptr += 1
-        flux = flux - (sync_pulse_length / 2)
+        flux = flux - (@sync_pulse_length / 2)
       end
 
       break if len && (bitstream.size >= (len * 8 + 1))
@@ -230,26 +232,22 @@ class MfmTrack
     if flux then
       return [ ptr, bitstream  ]
     else
-      return nil
+      return(:EOF)
     end
   end
 
   def expect_byte(no, expected, actual)
-    if actual != expected then
-      debug(15) { "Byte #".red + no.to_s.white.bold + ": Expected ".red + expected.white.bold + ", got ".red + actual.white.bold }
-      return false
-    else
-      return true
-    end
+    return true if (actual == expected)
+    debug(15) { "Byte #".red + no.to_s.white.bold + ": Expected ".red + expected.white.bold + ", got ".red + actual.white.bold }
+    return false
   end
 
-  def read_sector_header(ptr, revolution_to_analyze)
+  def read_sector_header(ptr)
     debug(15) { "--- Reading sector header".yellow }
-    ptr = find_marker(ptr, revolution_to_analyze)
+    ptr = find_marker(ptr)
+    return ptr if ptr == :EOF # End of track
 
-    return nil if ptr.nil? # End of track
-
-    ptr, bitstream = read_mfm(ptr, 4 + 4 + 2, revolution_to_analyze)
+    ptr, bitstream = read_mfm(ptr, 4 + 4 + 2)
     header = bitstream[1..-1].unpack "A8A8A8A8A8A8A8A8A8A8"
 
     debug(20) { "* Raw header data: #{header.inspect}" }
@@ -297,13 +295,15 @@ class MfmTrack
     [ ptr, track_read, side_read, sector_no, sector_size_code ]
   end
 
-  def read_sector_data(ptr, revolution_to_analyze)
-    debug(15) { "--- Reading sector data".yellow }
-    ptr = find_marker(ptr, revolution_to_analyze, 400)
-    return nil if ptr.nil?
+  def read_sector_data(ptr, sector_size)
+    debug(15) { "--- Reading sector data, sector size = ".yellow + sector_size.to_s.white.bold }
 
-    ptr, bitstream = read_mfm(ptr, 4 + 512 + 2, revolution_to_analyze)
-    sector = bitstream[1..-1].unpack "A8A8A8A8A4096A8A8"
+    res = find_marker(ptr, 400)
+    return(:EOF) if res == :EOF
+    return(ptr + 15) if res.nil?
+
+    ptr, bitstream = read_mfm(res, 4 + sector_size + 2)
+    sector = bitstream[1..-1].unpack "A8A8A8A8A#{sector_size * 8}A8A8"
 
     return [ ptr, nil ] unless expect_byte(1, '10100o01', sector.shift)
     return [ ptr, nil ] unless expect_byte(2, '10100o01', sector.shift)
@@ -326,66 +326,51 @@ class MfmTrack
     [ ptr, data, read_checksum == computed_checksum ]
   end
 
-  def scan_track(revolution_to_analyze)
+  def scan_track
     # Read just the sector headers
     ptr = 0
 
     loop {
-      data = read_sector_header(ptr, revolution_to_analyze)
-      break if data.nil?
+      ptr, track, side, sector = read_sector_header(ptr)
 
-      ptr, track, side, sector = data
-      next if track.nil?
-
-      if ptr.nil? then
-        debug(1) { "---EOF".red }
+      if ptr == :EOF then
+        debug(1) { "---End of track".red }
         break
       end
     }
   end
 
-  def read_revolution(revolution_to_analyze = 1, keep_bad_data = false)
+  def read_track(keep_bad_data = false)
     ptr = 0
-    data_hash = {}
 
+    self.sectors = {}
     loop do
-      if ptr.nil? then
-        debug(1) { "---EOF".red }
+      if ptr == :EOF then
+        debug(1) { "---End of track".red }
         break
       end
 
-      ptr, track, side, sector_no, sector_size_code = read_sector_header(ptr, revolution_to_analyze)
+      ptr, track, side, sector_no, sector_size_code = read_sector_header(ptr)
       next if track.nil?
 
-      if ptr.nil? then
-        debug(1) { "---EOF".red }
+      if ptr == :EOF then
+        debug(1) { "---End of track".red }
         break
       end
 
       sector = DiskSector.new(sector_no, sector_size_code)
-      ptr, sector.data, crc_matched = read_sector_data(ptr, revolution_to_analyze)
-      data_hash[sector.number] = sector if crc_matched || keep_bad_data
-    end
+      next if sector.size.nil? # Start over if sector header is messed up
 
-    debug(8) { "Revolution #".green + revolution_to_analyze.to_s.white.bold +
-                 ": sectors read: ".green + data_hash.to_a.count{ |pair| !pair.last.nil? }.to_s.white.bold }
+      ptr, sector.data, crc_matched = read_sector_data(ptr, sector.size)
+      self.sectors[sector.number] = sector if crc_matched || keep_bad_data
 
-    return data_hash
-  end
-
-  def read_track()
-    (1..revolutions.size).each do |rev|
-      next if revolutions[rev].nil?
-      debug(3) { "-----Reading revolution #".yellow + rev.to_s.white.bold + " -----------------------------------".yellow }
-      rev_sectors = read_revolution(rev)
-      rev_sectors.each_pair { |idx, sector|
-        sectors[sector.number] = sector if sectors[sector.number].nil?
-      }
+      break if successful_sectors == 10 # FIXME: account for other size sectors
     end
 
     debug(3) { "Track #".green + track_no.to_s.white.bold +
-                ": total sectors read: ".green + sectors.to_a.count{ |pair| !pair.last.nil? }.to_s.white.bold }
-    sectors
+                ": total sectors read: ".green + successful_sectors.to_s.white.bold }
+
+    ptr
   end
 
   def debug(msg_level)
@@ -406,8 +391,14 @@ class MfmTrack
   end
 
   # FIXME: Add handling of different size sectors
-  def is_complete?
-    (1..10).all? { |i| sectors[i] && sectors[i].data.size == sectors[i].size }
+  def successful_sectors
+    (1..10).count { |i| sectors[i] && sectors[i].data.size == sectors[i].size }
+#sectors.to_a.count{ |pair| !pair.last.nil? }
+  end
+
+  # FIXME: Add handling of different size sectors
+  def complete?
+    successful_sectors == 10
   end
 
 end
