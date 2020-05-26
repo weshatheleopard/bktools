@@ -16,11 +16,16 @@ class Disk
       track = MfmTrack.load(filename, debuglevel)
       track.read_track
 
-      sectors_read = (1..10).count { |i| track.sectors[i] && track.sectors[i].data.size == 512 }
-      puts "read: track #{track.track_no}, side #{track.side}, sectors read: #{sectors_read}"
+      msg = "Track #{track.track_no}, side #{track.side}, sectors read: #{track.successful_sectors}"
 
+      if track.complete? then
+        puts msg.green
+      else
+        puts msg.red
+      end
       disk.tracks << track
     }
+    puts "Tracks/sides read: #{disk.tracks.size}"
     disk
   end
 

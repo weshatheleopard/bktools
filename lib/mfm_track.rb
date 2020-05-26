@@ -4,6 +4,8 @@ include WaveFile
 class MfmTrack
   attr_accessor :track_no, :side, :sectors
   attr_accessor :fluxes, :indices
+  attr_accessor :force_sync_pulse_length
+
 
   def initialize(debuglevel = 0)
     @debuglevel = debuglevel
@@ -46,6 +48,8 @@ class MfmTrack
     out_path = Pathname.new(path).join(out_fn)
 
     File.open(out_path, "wb") { |f|
+      f.puts "-----(#{force_sync_pulse_length})" if force_sync_pulse_length
+
       fluxes.each_with_index { |flux, pos|
         idx_no = indices.index(pos)
         f.puts "-----[#{idx_no + 1}]" if idx_no
@@ -93,7 +97,9 @@ class MfmTrack
       if line =~ /^-----\[(\d+)\]\s*$/ then
         track.indices << track.fluxes.size
       elsif line =~ /^\s*(\d+)(\s*#.+)?$/ then
-        track.fluxes << ($1.to_i)
+        track.fluxes << $1.to_i
+      elsif line =~ /^-----\((\d+(?:\.\d+)?)\)\s*$/ then
+        track.force_sync_pulse_length = $1.to_f.round(1)
       end
     }
 
@@ -160,7 +166,9 @@ class MfmTrack
           debug(10) { "Magic sequence found @ ".green.bold + (ptr - 15).to_s.white.bold }
 
           marker = fluxes[(ptr - 15)..(ptr - 1)]
-          @sync_pulse_length = marker.inject(:+) / 24.0
+          @sync_pulse_length = (marker.inject(:+) / 24.0).round(1)
+          @sync_pulse_length = @force_sync_pulse_length if @force_sync_pulse_length
+
           debug(15) { "Sync pulse length = #{@sync_pulse_length}".magenta }
           return(ptr - 16)
         end
@@ -172,12 +180,20 @@ class MfmTrack
     return nil
   end
 
+  def read_flux(ptr)
+    index_no = indices.index(ptr)
+    if index_no then
+      debug(20) { "----- Index marker #".magenta + index_no.to_s.white.bold + " @ ".magenta + ptr..to_s.white.bold }
+    end
+    flux = fluxes[ptr]
+    debug(30) { "     Next flux read: #{flux}".yellow }
+    flux
+  end
+
   def read_mfm(ptr, len, start_state = nil)
     bitstream = ''
-#    sync_pulse_length = determine_sync_pulse_length(ptr)
 
-
-    flux = fluxes[ptr]
+    flux = read_flux(ptr)
 
     # If start state is not specified, we assume reading starts at the marker, which is preceded by a zero bit,
     # and that means pre-marker impulse oughtta be 1.5x
@@ -199,8 +215,7 @@ class MfmTrack
       if flux > (@sync_pulse_length * 1.75) then # Special case - synhro A1 (10100O01)
         debug(30) { "[" + "0o".bold + "] Current flux > 7/4 sync pulse. Special case of sector marker." }
         bitstream << '0o'
-        flux = fluxes[ptr]
-        debug(30) { "     Next flux read: #{flux}".yellow }
+        flux = read_flux(ptr)
         ptr += 1
       elsif flux > @sync_pulse_length then
         debug(30) { "[" + "0".bold + "]  Current flux longer than sync pulse." }
@@ -209,19 +224,17 @@ class MfmTrack
       elsif flux > (@sync_pulse_length * 0.75) then
         debug(30) { "[" + "0".bold + "]  Current flux between 3/4 and 1 sync pulse, stretching it to full." }
         bitstream << '0'
-        flux = fluxes[ptr]
-        debug(30) { "     Next flux read: #{flux}".yellow }
+        flux = read_flux(ptr)
         ptr += 1
       elsif flux < (@sync_pulse_length * 0.25) then # Tiny reminder of previous flux
         debug(30) { "     Current flux less than 1/4 sync pulse, considering it a remainder of a previous flux" }
-        flux = fluxes[ptr]
-        debug(30) { "     Next flux read: #{flux}".yellow }
+        flux = read_flux(ptr)
         ptr += 1
       else
         debug(30) { "[" + "1".bold + "]  Current flux between 1/4 and 3/4 sync pulse." }
         bitstream << '1'
-        flux = fluxes[ptr]
-        debug(30) { "     Next flux read: #{flux}".yellow }
+        flux = read_flux(ptr)
+        return(:EOF) if flux.nil?
         ptr += 1
         flux = flux - (@sync_pulse_length / 2)
       end
@@ -248,6 +261,7 @@ class MfmTrack
     return ptr if ptr == :EOF # End of track
 
     ptr, bitstream = read_mfm(ptr, 4 + 4 + 2)
+    return ptr if ptr == :EOF # End of track
     header = bitstream[1..-1].unpack "A8A8A8A8A8A8A8A8A8A8"
 
     debug(20) { "* Raw header data: #{header.inspect}" }
@@ -329,15 +343,28 @@ class MfmTrack
   def scan_track
     # Read just the sector headers
     ptr = 0
-
     loop {
       ptr, track, side, sector = read_sector_header(ptr)
+
+      break unless track.nil?
 
       if ptr == :EOF then
         debug(1) { "---End of track".red }
         break
       end
     }
+  end
+
+  def find_sync_pulse_length
+    spl = 80
+
+    15.times do
+      self.force_sync_pulse_length = spl
+      pos = self.read_track
+
+      return spl if self.complete?
+    end
+    return nil
   end
 
   def read_track(keep_bad_data = false)
@@ -369,7 +396,6 @@ class MfmTrack
 
     debug(3) { "Track #".green + track_no.to_s.white.bold +
                 ": total sectors read: ".green + successful_sectors.to_s.white.bold }
-
     ptr
   end
 
@@ -393,7 +419,6 @@ class MfmTrack
   # FIXME: Add handling of different size sectors
   def successful_sectors
     (1..10).count { |i| sectors[i] && sectors[i].data.size == sectors[i].size }
-#sectors.to_a.count{ |pair| !pair.last.nil? }
   end
 
   # FIXME: Add handling of different size sectors

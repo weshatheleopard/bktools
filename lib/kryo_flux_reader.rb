@@ -26,7 +26,6 @@ class KryoFluxReader
     File.open(@filename, "rb") { |f| @stream = f.read.bytes }
 
     @track = MfmTrack.new
-
     @flux_hash = {}
     @indices_array=[]
 
@@ -164,8 +163,16 @@ class KryoFluxReader
       reader = self.new(filename, debuglevel)
       reader.debug(debuglevel) { "Processing: #{filename}".yellow }
       track = reader.convert_track
-      track.scan_track
-      track.save(filename)
+      spl = track.find_sync_pulse_length
+
+      if spl then
+        reader.debug(0) { "Track processing: ".white + "success".green }
+
+        track.scan_track
+        track.save(filename)
+      else
+        reader.debug(0) { "Track processing: ".white + "fail".red}
+      end
     }
   end
 
