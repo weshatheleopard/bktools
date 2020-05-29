@@ -25,7 +25,7 @@ class KryoFluxReader
   def convert_track
     File.open(@filename, "rb") { |f| @stream = f.read.bytes }
 
-    @track = MfmTrack.new
+    @track = MfmTrack.new(@debuglevel)
     @flux_hash = {}
     @indices_array=[]
 

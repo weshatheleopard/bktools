@@ -5,7 +5,7 @@ class MfmTrack
   attr_accessor :track_no, :side, :sectors
   attr_accessor :fluxes, :indices
   attr_accessor :force_sync_pulse_length
-
+  attr_accessor :debuglevel
 
   def initialize(debuglevel = 0)
     @debuglevel = debuglevel
@@ -105,39 +105,6 @@ class MfmTrack
 
     track
   end
-
-=begin
-  def determine_sync_pulse_length(current_idx = nil)
-    return @sync_pulse_length if @sync_pulse_length && current_idx.nil?
-
-    current_idx ||= 0
-    detected_sync_pulse_length = 99999
-    total_sequence_length = flux_count = 0
-
-    loop do
-      flux = fluxes[current_idx]
-      current_idx += 1
-      detected_sync_pulse_length = ((total_sequence_length + flux) / (flux_count + 1)).round(1)
-
-      debug(30) { "#{current_idx}: flux length=#{flux}, flux count=#{flux_count}, pulse length=#{detected_sync_pulse_length}".magenta }
-
-      # If the difference is < 15% then it's probably a part of the sequence.
-      if (((flux / detected_sync_pulse_length) - 1).abs < 0.15) then
-        total_sequence_length += flux
-        flux_count += 1.0
-      else
-        if flux_count < 20 then  # We've gavered sufficient number of specimen
-          total_sequence_length = flux_count = 0
-        else
-          debug(15) { "Sync pulse length determined to be " + detected_sync_pulse_length.to_s.white + " @ ".green + current_idx.to_s.white.bold }
-          break
-        end
-      end
-    end
-
-    @sync_pulse_length = detected_sync_pulse_length
-  end
-=end
 
   def find_marker(ptr, max_distance = nil)
     endptr = ptr + max_distance if max_distance
@@ -356,13 +323,14 @@ class MfmTrack
   end
 
   def find_sync_pulse_length
-    spl = 80
+    spl = 79
 
-    15.times do
+    14.times do
       self.force_sync_pulse_length = spl
       pos = self.read_track
 
       return spl if self.complete?
+      spl += 0.5
     end
     return nil
   end
