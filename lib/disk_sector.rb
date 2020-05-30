@@ -18,6 +18,8 @@ class DiskSector
     end
   end
 
+  BYTES_PER_LINE = 16
+
   def display
     b0 = b1 = nil
     data_str = ''
@@ -38,8 +40,8 @@ class DiskSector
         b0 = b1 = nil
       end
 
-      if (i % 8) == 7 then
-        print_line(i - 7, data_str, char_str)
+      if (i % BYTES_PER_LINE) == (BYTES_PER_LINE - 1) then
+        print_line(((i + 1) - BYTES_PER_LINE), data_str, char_str)
         data_str = ''
         char_str = ''
       end
@@ -53,7 +55,8 @@ class DiskSector
   end
 
   def print_line(base_addr, data_str, char_str)
-    data_str = (data_str + ' ' * 28)[0...28]
+    strlen = ((BYTES_PER_LINE / 2) * 7)
+    data_str = (data_str + ' ' * strlen)[0...(strlen)]
     print Tools::octal(base_addr), ': ', data_str, ' ', char_str, "\n"
     data_str = ''
     char_str = ''
