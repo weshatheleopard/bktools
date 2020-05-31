@@ -1,6 +1,8 @@
 require 'wavefile'
 include WaveFile
 
+require 'bit_stream'
+
 class MfmTrack
   attr_accessor :track_no, :side, :sectors
   attr_accessor :fluxes, :indices
@@ -158,7 +160,7 @@ class MfmTrack
   end
 
   def read_mfm(ptr, len, start_state = nil)
-    bitstream = ''
+    bitstream = BitStream.new
 
     flux = read_flux(ptr)
 
@@ -181,16 +183,16 @@ class MfmTrack
 
       if flux > (@sync_pulse_length * 1.75) then # Special case - synhro A1 (10100O01)
         debug(30) { "[" + "0o".bold + "] Current flux > 7/4 sync pulse. Special case of sector marker." }
-        bitstream << '0o'
+        bitstream.push(ptr, '0o')
         flux = read_flux(ptr)
         ptr += 1
       elsif flux > @sync_pulse_length then
         debug(30) { "[" + "0".bold + "]  Current flux longer than sync pulse." }
-        bitstream << '0'
+        bitstream.push(ptr, '0')
         flux = flux - @sync_pulse_length
       elsif flux > (@sync_pulse_length * 0.75) then
         debug(30) { "[" + "0".bold + "]  Current flux between 3/4 and 1 sync pulse, stretching it to full." }
-        bitstream << '0'
+        bitstream.push(ptr, '0')
         flux = read_flux(ptr)
         ptr += 1
       elsif flux < (@sync_pulse_length * 0.25) then # Tiny reminder of previous flux
@@ -199,7 +201,7 @@ class MfmTrack
         ptr += 1
       else
         debug(30) { "[" + "1".bold + "]  Current flux between 1/4 and 3/4 sync pulse." }
-        bitstream << '1'
+        bitstream.push(ptr, '1')
         flux = read_flux(ptr)
         return(:EOF) if flux.nil?
         ptr += 1
@@ -210,7 +212,7 @@ class MfmTrack
     end
 
     if flux then
-      return [ ptr, bitstream  ]
+      return [ ptr, bitstream ]
     else
       return(:EOF)
     end
@@ -229,7 +231,7 @@ class MfmTrack
 
     ptr, bitstream = read_mfm(ptr, 4 + 4 + 2)
     return ptr if ptr == :EOF # End of track
-    header = bitstream[1..-1].unpack "A8A8A8A8A8A8A8A8A8A8"
+    header = bitstream.to_s.unpack "A8A8A8A8A8A8A8A8A8A8"
 
     debug(20) { "* Raw header data: #{header.inspect}" }
 
@@ -284,7 +286,7 @@ class MfmTrack
     return(ptr + 15) if res.nil?
 
     ptr, bitstream = read_mfm(res, 4 + sector_size + 2)
-    sector = bitstream[1..-1].unpack "A8A8A8A8A#{sector_size * 8}A8A8"
+    sector = bitstream.to_s.unpack "A8A8A8A8A#{sector_size * 8}A8A8"
 
     return [ ptr, nil ] unless expect_byte(1, '10100o01', sector.shift)
     return [ ptr, nil ] unless expect_byte(2, '10100o01', sector.shift)
