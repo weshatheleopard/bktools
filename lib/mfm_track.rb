@@ -231,7 +231,8 @@ class MfmTrack
 
     ptr, bitstream = read_mfm(ptr, 4 + 4 + 2)
     return ptr if ptr == :EOF # End of track
-    header = bitstream.to_s.unpack "A8A8A8A8A8A8A8A8A8A8"
+    header_bytes = bitstream.to_bytes
+    header = header_bytes.keys.sort.collect { |k| header_bytes[k] }
 
     debug(20) { "* Raw header data: #{header.inspect}" }
 
@@ -241,9 +242,10 @@ class MfmTrack
     return [ ptr, nil ] unless expect_byte(4, '11111110', header.shift)
     header.map! { |b| b.to_i(2) }
 
-    b0 = header.pop
-    b1 = header.pop
-    read_checksum = Tools::bytes2word(b0, b1)
+    b_low  = header.pop
+    b_high = header.pop
+
+    read_checksum = Tools::bytes2word(b_low, b_high)
 
     computed_checksum = crc_ccitt([0xa1, 0xa1, 0xa1, 0xfe] + header)
 
@@ -295,10 +297,10 @@ class MfmTrack
 
     data = sector.shift.scan(/\d{8}/).map! { |b| b.to_i(2) }
 
-    b0 = sector.pop.to_i(2)
-    b1 = sector.pop.to_i(2)
+    b_high = sector.shift.to_i(2)
+    b_low = sector.shift.to_i(2)
 
-    read_checksum = Tools::bytes2word(b0, b1)
+    read_checksum = Tools::bytes2word(b_low, b_high)
     computed_checksum = crc_ccitt([0xa1, 0xa1, 0xa1, 0xfb] + data)
 
     debug(1) { "Sector data:" }

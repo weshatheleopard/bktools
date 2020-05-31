@@ -17,8 +17,8 @@ module Tools
     word_array
   end
 
-  def self.bytes2word(b0, b1)
-    (b1 << 8) | b0
+  def self.bytes2word(b_low, b_high)
+    (b_high << 8) | b_low
   end
 
   def self.octal(bb)

@@ -32,6 +32,36 @@ class BitStream
   end
 
   def to_bytes
+    bytes = {}
+    keys = @hash.keys.sort
+    prev_key = keys.first
+    byte = ''
+    bits = ''
+    correction_flag = true
 
+    loop do
+      case bits.size
+      when 0 then
+        key = keys.shift
+        bits = @hash[key]
+        break if bits.nil?
+        bits = bits.dup
+      else
+        byte << bits.slice!(0)
+
+        if correction_flag then
+          correction_flag = false
+          byte = ''
+        end
+
+        if byte.size == 8 then
+          bytes[prev_key] = byte
+          prev_key = keys.first
+          byte = ''
+        end
+      end
+    end
+
+    return bytes
   end
 end
