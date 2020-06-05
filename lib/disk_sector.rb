@@ -1,11 +1,12 @@
 class DiskSector
-  attr_accessor :data
+  attr_accessor :data, :read_checksum
   attr_reader :number
   attr_reader :size_code
 
   def initialize(number, size_code)
     @number = number
     @size_code = size_code
+    @read_checksum = nil
     @data = []
   end
 
@@ -21,6 +22,11 @@ class DiskSector
   BYTES_PER_LINE = 16
 
   def display
+    if data.nil? then
+      puts "----- No data to display -----"
+      return
+    end
+
     b0 = b1 = nil
     data_str = ''
     char_str = ''
@@ -60,6 +66,11 @@ class DiskSector
     print Tools::octal(base_addr), ': ', data_str, ' ', char_str, "\n"
     data_str = ''
     char_str = ''
+  end
+
+  def valid?
+    (data.size == self.size) &&
+      (self.read_checksum == Tools::crc_ccitt([0xA1, 0xA1, 0xA1, 0xFB] + self.data))
   end
 
 end

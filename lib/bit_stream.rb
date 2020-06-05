@@ -8,6 +8,7 @@ class BitStream
   end
 
   def push(ptr, bit)
+    ptr = ptr - 1
     @size += 1
     if @hash.has_key?(ptr) then
       @hash[ptr] += bit

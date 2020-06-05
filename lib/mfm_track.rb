@@ -121,7 +121,8 @@ class MfmTrack
 
       sync_pulse_length = (marker_candidate.inject(:+)) / 8.0
 
-      if ((((sync_pulse_length * 1.75) < marker_candidate[0]) && (marker_candidate[0] < (sync_pulse_length * 2.25))) &&
+      if ((sync_pulse_length > 75) &&
+          (((sync_pulse_length * 1.75) < marker_candidate[0]) && (marker_candidate[0] < (sync_pulse_length * 2.25))) &&
           (((sync_pulse_length * 1.25) < marker_candidate[1]) && (marker_candidate[1] < (sync_pulse_length * 1.75))) &&
           (((sync_pulse_length * 1.75) < marker_candidate[2]) && (marker_candidate[2] < (sync_pulse_length * 2.25))) &&
           (((sync_pulse_length * 1.25) < marker_candidate[3]) && (marker_candidate[3] < (sync_pulse_length * 1.75))) &&
@@ -155,11 +156,12 @@ class MfmTrack
       debug(20) { "----- Index marker #".magenta + index_no.to_s.white.bold + " @ ".magenta + ptr..to_s.white.bold }
     end
     flux = fluxes[ptr]
-    debug(30) { "     Next flux read: #{flux}".yellow }
+    debug(30) { "     Next flux read: ".yellow + flux.to_s.white.bold + " @ ".yellow + ptr.to_s.white.bold }
     flux
   end
 
-  def read_mfm(ptr, len, start_state = nil)
+  def read_mfm(ptr, len, start_state = nil, sync_pulse_length = nil)
+    @sync_pulse_length = sync_pulse_length if sync_pulse_length
     bitstream = BitStream.new
 
     flux = read_flux(ptr)
@@ -175,37 +177,49 @@ class MfmTrack
     end
 
     ptr += 1
+    leftover = false
 
     loop do
       break if flux.nil?
       flux = flux.round(1)
-      debug(20) { "Flux @ #{ptr}: #{flux}" }
+      debug(20) { "Flux: #{flux}" }
 
       if flux > (@sync_pulse_length * 1.75) then # Special case - synhro A1 (10100O01)
         debug(30) { "[" + "0o".bold + "] Current flux > 7/4 sync pulse. Special case of sector marker." }
         bitstream.push(ptr, '0o')
         flux = read_flux(ptr)
         ptr += 1
+        leftover = false
       elsif flux > @sync_pulse_length then
         debug(30) { "[" + "0".bold + "]  Current flux longer than sync pulse." }
         bitstream.push(ptr, '0')
         flux = flux - @sync_pulse_length
+        leftover = true
       elsif flux > (@sync_pulse_length * 0.75) then
         debug(30) { "[" + "0".bold + "]  Current flux between 3/4 and 1 sync pulse, stretching it to full." }
         bitstream.push(ptr, '0')
         flux = read_flux(ptr)
         ptr += 1
+        leftover = false
       elsif flux < (@sync_pulse_length * 0.25) then # Tiny reminder of previous flux
         debug(30) { "     Current flux less than 1/4 sync pulse, considering it a remainder of a previous flux" }
         flux = read_flux(ptr)
         ptr += 1
+        leftover = false
       else
         debug(30) { "[" + "1".bold + "]  Current flux between 1/4 and 3/4 sync pulse." }
+
+        if !leftover then
+          debug(10) { "Format error: freshly red flux @ ".red + (ptr - 1).to_s.white.bold + " is too short: ".red + flux.to_s.white.bold + ". Expanding to full flux.".red }
+          flux = @sync_pulse_length
+        end
+
         bitstream.push(ptr, '1')
         flux = read_flux(ptr)
         return(:EOF) if flux.nil?
         ptr += 1
         flux = flux - (@sync_pulse_length / 2)
+        leftover = true
       end
 
       break if len && (bitstream.size >= (len * 8 + 1))
@@ -246,8 +260,7 @@ class MfmTrack
     b_high = header.pop
 
     read_checksum = Tools::bytes2word(b_low, b_high)
-
-    computed_checksum = crc_ccitt([0xa1, 0xa1, 0xa1, 0xfe] + header)
+    computed_checksum = Tools::crc_ccitt([0xA1, 0xA1, 0xA1, 0xFE] + header)
 
     track_read = header.shift
     side_read = header.shift
@@ -288,30 +301,46 @@ class MfmTrack
     return(ptr + 15) if res.nil?
 
     ptr, bitstream = read_mfm(res, 4 + sector_size + 2)
-    sector = bitstream.to_s.unpack "A8A8A8A8A#{sector_size * 8}A8A8"
+    return(:EOF) if ptr == :EOF
+
+    bytes = bitstream.to_bytes
+    positions = bytes.keys.sort
+    sector = positions.collect { |k| bytes[k] }
 
     return [ ptr, nil ] unless expect_byte(1, '10100o01', sector.shift)
     return [ ptr, nil ] unless expect_byte(2, '10100o01', sector.shift)
     return [ ptr, nil ] unless expect_byte(3, '10100o01', sector.shift)
     return [ ptr, nil ] unless expect_byte(4, '11111011', sector.shift)
 
-    data = sector.shift.scan(/\d{8}/).map! { |b| b.to_i(2) }
+    b_low = sector.pop.to_i(2)
+    b_high = sector.pop.to_i(2)
 
-    b_high = sector.shift.to_i(2)
-    b_low = sector.shift.to_i(2)
+    data = sector.each_with_index.collect { |b, i|
+        if b =~ /o/ then
+          debug(1) { "Format error: sector cotains a too long of a pulse @ ".red.bold + positions[i + 4].to_s.white.bold }
+          0
+        else b.to_i(2)
+        end
+      }
+
+    # This is should be the first check, but then we won't see the debug message about messed up bits
+    if (sector.size != sector_size) then
+      debug(1) { "Sector size mismatch: expected #{sector_size}, got #{sector.size}" }
+      return [ ptr, data ]
+    end
 
     read_checksum = Tools::bytes2word(b_low, b_high)
-    computed_checksum = crc_ccitt([0xa1, 0xa1, 0xa1, 0xfb] + data)
+    computed_checksum = Tools::crc_ccitt([0xA1, 0xA1, 0xA1, 0xFB] + data)
 
     debug(1) { "Sector data:" }
-    debug(5) { "  * Computed checksum: " + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
     debug(5) { "  * Read checksum:     " + Tools::zeropad(read_checksum.to_s(2), 16).bold }
-    debug(1) { "  * Data checksum:   " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
+    debug(5) { "  * Computed checksum: " + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
+    debug(1) { "  * Data checksum:     " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
 
-    [ ptr, data, read_checksum == computed_checksum ]
+    [ ptr, data, read_checksum, computed_checksum ]
   end
 
-  def scan_track
+  def scan
     # Read just the sector headers
     ptr = 0
     loop {
@@ -327,15 +356,12 @@ class MfmTrack
   end
 
   def find_sync_pulse_length
-    spl = 79
-
-    14.times do
+    [ 80, 81, 79, 82, 80.5, 81.5, 79.5, 80.2, 80.4, 80.6, 80.8, 81.2, 79.8, 79.6, 81.4, 79.4, 81.6, 79.2, 81.8 ].each { |spl|
       self.force_sync_pulse_length = spl
       pos = self.read_track
 
       return spl if self.complete?
-      spl += 0.5
-    end
+    }
     return nil
   end
 
@@ -360,8 +386,16 @@ class MfmTrack
       sector = DiskSector.new(sector_no, sector_size_code)
       next if sector.size.nil? # Start over if sector header is messed up
 
-      ptr, sector.data, crc_matched = read_sector_data(ptr, sector.size)
-      self.sectors[sector.number] = sector if crc_matched || keep_bad_data
+      ptr, data, read_checksum, computed_checksum = read_sector_data(ptr, sector.size)
+
+      if data then
+        sector.data = data
+      end
+
+      if keep_bad_data || (read_checksum && computed_checksum && (read_checksum == computed_checksum)) then
+        sector.read_checksum = read_checksum
+        self.sectors[sector.number] = sector
+      end
 
       break if successful_sectors == 10 # FIXME: account for other size sectors
     end
@@ -377,25 +411,100 @@ class MfmTrack
     puts(msg) if msg
   end
 
-  def crc_ccitt(byte_array)
-    crc = 0xffff
-
-    byte_array.each { |b|
-      crc ^= (b << 8)
-      8.times { crc = ((crc & 0x8000)!=0) ? ((crc << 1) ^ 0x1021) : (crc << 1) }
-    }
-
-    return crc & 0xffff
-  end
-
   # FIXME: Add handling of different size sectors
   def successful_sectors
-    (1..10).count { |i| sectors[i] && sectors[i].data.size == sectors[i].size }
+    (1..10).count { |i| sectors[i] && sectors[i].valid? }
   end
 
   # FIXME: Add handling of different size sectors
   def complete?
     successful_sectors == 10
+  end
+
+  # For not so well scanned tracks: attempt to straighten the signal
+  def cleanup(sync_pulse_length)
+    puts "Stage 1: abnormally long pulse surrounded by abnormally short pulses".green
+    loop do
+      changes_made = 0
+      (1..(fluxes.size - 2)).each do |i|
+        if (fluxes[i - 1] < sync_pulse_length) &&
+           (fluxes[i] > 2 * sync_pulse_length) &&
+           (fluxes[i + 1] < sync_pulse_length) then
+          changes_made += 1
+          fluxes[i-1] += 1
+          fluxes[i + 1] += 1
+          fluxes[i] -= 2
+        end
+      end
+      break if changes_made == 0
+      puts "Changes made: ".yellow + changes_made.to_s.white
+    end
+
+    puts "Stage 2: long pulse surrounded by abnormally short pulses".green
+    loop do
+      changes_made = 0
+      (1..(fluxes.size - 2)).each do |i|
+        if (fluxes[i - 1] < sync_pulse_length) &&
+           (((fluxes[i] > sync_pulse_length * 1.5)) && (fluxes[i] < (sync_pulse_length * 1.8))) &&
+           (fluxes[i + 1] < sync_pulse_length) then
+          changes_made += 1
+          fluxes[i-1] += 1
+          fluxes[i] -= 2
+          fluxes[i+1] += 1
+        end
+      end
+      break if changes_made == 0
+      puts "Changes made: ".yellow + changes_made.to_s.white
+    end
+
+    puts "Stage 3: abnormally short pulse followed by long pulses".green
+
+    loop do
+      changes_made = 0
+      (1..(fluxes.size - 2)).each do |i|
+        if ((fluxes[i-1] > (sync_pulse_length * 1.5)) && (fluxes[i-1] < (sync_pulse_length * 1.8))) &&
+           ((fluxes[i+1] > (sync_pulse_length * 1.5)) && (fluxes[i+1] < (sync_pulse_length * 1.8))) &&
+           (fluxes[i] < sync_pulse_length) then
+          changes_made += 1
+          fluxes[i-1] -= 1
+          fluxes[i] += 2
+          fluxes[i+1] -= 1
+        end
+      end
+      puts "changes_made made: #{changes_made}"
+      break if changes_made == 0
+    end
+
+    puts "Stage 4: abnormally short pulse followed by abnormally long pulse".green
+
+    loop do
+      changes_made = 0
+      (1..(fluxes.size - 2)).each do |i|
+        if (fluxes[i - 1] < sync_pulse_length) && (fluxes[i] > 2 * sync_pulse_length) then
+          changes_made += 1
+          fluxes[i - 1] += 1
+          fluxes[i] -= 1
+        end
+      end
+      break if changes_made == 0
+      puts "Changes made: ".yellow + changes_made.to_s.white
+    end
+
+    puts "Stage 5: abnormally long pulse followed by abnormally short pulse".green
+
+    loop do
+      changes_made = 0
+      (1..(fluxes.size - 2)).each do |i|
+        if (fluxes[i + 1] < sync_pulse_length) && (fluxes[i] > 2 * sync_pulse_length) then
+          changes_made += 1
+          fluxes[i + 1] += 1
+          fluxes[i] -= 1
+        end
+      end
+      break if changes_made == 0
+      puts "Changes made: ".yellow + changes_made.to_s.white
+    end
+
   end
 
 end

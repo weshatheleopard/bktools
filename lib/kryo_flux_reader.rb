@@ -23,6 +23,7 @@ class KryoFluxReader
   # Each item in the track image array corresponds to a single rotation of the floppy disk.
   # Each track image may slightly differ due to hardware issues. We'll look into that later.
   def convert_track
+    @file_position = 0
     File.open(@filename, "rb") { |f| @stream = f.read.bytes }
 
     @track = MfmTrack.new(@debuglevel)
@@ -155,23 +156,30 @@ class KryoFluxReader
     dword
   end
 
-  def self.convert_disk(dir, debuglevel = 0)
+  def self.convert_disk(dir, debuglevel = 0, fullscan = true)
     full_path = Pathname.new(dir).realpath
     pattern = full_path.join("*.raw")
 
     Dir.glob(pattern).sort.each { |filename|
       reader = self.new(filename, debuglevel)
-      reader.debug(debuglevel) { "Processing: #{filename}".yellow }
+      reader.debug(2) { "Processing: #{filename}".yellow }
+
       track = reader.convert_track
-      spl = track.find_sync_pulse_length
 
-      if spl then
-        reader.debug(0) { "Track processing: ".white + "success".green }
+      if fullscan then
+        spl = track.find_sync_pulse_length
 
-        track.scan_track
-        track.save(filename)
+        if spl then
+          reader.debug(0) { "Track processing: ".white + "success".green }
+
+          track.scan
+          track.save(filename)
+        else
+          reader.debug(0) { "Track processing: ".white + "fail".red}
+        end
       else
-        reader.debug(0) { "Track processing: ".white + "fail".red}
+        track.scan
+        track.save(filename)
       end
     }
   end

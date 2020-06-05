@@ -69,4 +69,15 @@ module Tools
     (byte < 32) ? '.' : byte.chr
   end
 
+  def self.crc_ccitt(byte_array)
+    crc = 0xFFFF
+
+    byte_array.each { |b|
+      crc ^= (b << 8)
+      8.times { crc = ((((crc & 0x8000)!=0) ? ((crc << 1) ^ 0x1021) : (crc << 1)) & 0xFFFF) }
+    }
+
+    return crc & 0xFFFF
+  end
+
 end
