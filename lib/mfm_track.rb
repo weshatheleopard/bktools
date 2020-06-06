@@ -42,7 +42,7 @@ class MfmTrack
     Writer.new("#{filename}.wav", Format.new(:mono, :pcm_8, SOUND_FREQUENCY)) { |writer| writer.write(@buffer) }
   end
 
-  def save(filename, max_len = nil)
+  def save(filename, max_len = nil, with_line_numbers = false)
     path = Pathname.new(filename).dirname.realpath
     fn = Pathname.new(filename).basename
 
@@ -55,7 +55,13 @@ class MfmTrack
       fluxes.each_with_index { |flux, pos|
         idx_no = indices.index(pos)
         f.puts "-----[#{idx_no + 1}]" if idx_no
-        f.puts "%4i # %05i" % [ flux, pos ]
+
+        str = '%4i' % flux
+        if with_line_numbers then
+          str << ' # %05i' % pos
+        end
+
+        f.puts str
         break if max_len && (pos > max_len)
       }
       f.puts "=====END"
@@ -471,7 +477,7 @@ class MfmTrack
           fluxes[i+1] -= 1
         end
       end
-      puts "changes_made made: #{changes_made}"
+      puts "Changes made: ".yellow + changes_made.to_s.white
       break if changes_made == 0
     end
 
