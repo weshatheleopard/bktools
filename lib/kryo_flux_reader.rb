@@ -175,7 +175,17 @@ class KryoFluxReader
           track.scan
           track.save(filename)
         else
-          reader.debug(0) { "Track processing: ".white + "fail".red}
+          reader.debug(0) { "Track processing: ".white + "performing cleanup".yellow}
+          track.cleanup(80)
+          track.force_sync_pulse_length = nil
+          track.read_track
+          if track.complete? then
+            reader.debug(0) { "Track processing: ".white + "cleanup successful".green}
+            track.save(filename)
+          else
+            reader.debug(0) { "Track processing: ".white + "fail".red}
+          end
+
         end
       else
         track.scan

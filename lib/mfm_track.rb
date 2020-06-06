@@ -1,3 +1,4 @@
+
 require 'wavefile'
 include WaveFile
 
@@ -273,14 +274,14 @@ class MfmTrack
     sector_no = header.shift
     sector_size_code = header.shift
 
-    debug(1) { "Sector header:" }
-    debug(2) { "  * Track:             ".blue.bold + track_read.to_s.bold }
-    debug(2) { "  * Side:              ".blue.bold + side_read.to_s.bold }
-    debug(2) { "  * Sector #:          ".blue.bold + sector_no.to_s.bold }
-    debug(3) { "  * Sector size:       ".blue.bold + sector_size_code.to_s.bold }
+    debug(2) { "Sector header:" }
+    debug(3) { "  * Track:             ".blue.bold + track_read.to_s.bold }
+    debug(4) { "  * Side:              ".blue.bold + side_read.to_s.bold }
+    debug(4) { "  * Sector #:          ".blue.bold + sector_no.to_s.bold }
+    debug(5) { "  * Sector size:       ".blue.bold + sector_size_code.to_s.bold }
     debug(5) { "  * Computed checksum: " + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
     debug(5) { "  * Read checksum:     " + Tools::zeropad(read_checksum.to_s(2), 16).bold }
-    debug(1) { "  * Header checksum:   " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
+    debug(2) { "  * Header checksum:   " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
 
     if read_checksum == computed_checksum then
       if self.track_no.nil? then
@@ -323,7 +324,7 @@ class MfmTrack
 
     data = sector.each_with_index.collect { |b, i|
         if b =~ /o/ then
-          debug(1) { "Format error: sector cotains a too long of a pulse @ ".red.bold + positions[i + 4].to_s.white.bold }
+          debug(6) { "Format error: sector cotains a too long of a pulse @ ".red.bold + positions[i + 4].to_s.white.bold }
           0
         else b.to_i(2)
         end
@@ -331,17 +332,17 @@ class MfmTrack
 
     # This is should be the first check, but then we won't see the debug message about messed up bits
     if (sector.size != sector_size) then
-      debug(1) { "Sector size mismatch: expected #{sector_size}, got #{sector.size}" }
+      debug(2) { "Sector size mismatch: expected ".red + sector_size.to_s.white + ", got ".red + sector.size.to_s.white }
       return [ ptr, data ]
     end
 
     read_checksum = Tools::bytes2word(b_low, b_high)
     computed_checksum = Tools::crc_ccitt([0xA1, 0xA1, 0xA1, 0xFB] + data)
 
-    debug(1) { "Sector data:" }
+    debug(2) { "Sector data:" }
     debug(5) { "  * Read checksum:     " + Tools::zeropad(read_checksum.to_s(2), 16).bold }
     debug(5) { "  * Computed checksum: " + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
-    debug(1) { "  * Data checksum:     " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
+    debug(2) { "  * Data checksum:     " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
 
     [ ptr, data, read_checksum, computed_checksum ]
   end
@@ -355,7 +356,7 @@ class MfmTrack
       break unless track.nil?
 
       if ptr == :EOF then
-        debug(1) { "---End of track".red }
+        debug(2) { "---End of track".red }
         break
       end
     }
@@ -377,7 +378,7 @@ class MfmTrack
     self.sectors = {}
     loop do
       if ptr == :EOF then
-        debug(1) { "---End of track".red }
+        debug(2) { "---End of track".red }
         break
       end
 
@@ -385,7 +386,7 @@ class MfmTrack
       next if track.nil?
 
       if ptr == :EOF then
-        debug(1) { "---End of track".red }
+        debug(2) { "---End of track".red }
         break
       end
 
