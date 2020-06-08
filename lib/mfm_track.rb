@@ -365,14 +365,14 @@ class MfmTrack
   def find_sync_pulse_length
     [ 80, 81, 79, 82, 80.5, 81.5, 79.5, 80.2, 80.4, 80.6, 80.8, 81.2, 79.8, 79.6, 81.4, 79.4, 81.6, 79.2, 81.8 ].each { |spl|
       self.force_sync_pulse_length = spl
-      pos = self.read_track
+      pos = self.read
 
       return spl if self.complete?
     }
     return nil
   end
 
-  def read_track(keep_bad_data = false)
+  def read(keep_bad_data = false)
     ptr = 0
 
     self.sectors = {}
@@ -465,7 +465,6 @@ class MfmTrack
     end
 
     puts "Stage 3: abnormally short pulse followed by long pulses".green
-
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
@@ -483,7 +482,6 @@ class MfmTrack
     end
 
     puts "Stage 4: abnormally short pulse followed by abnormally long pulse".green
-
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
@@ -498,7 +496,6 @@ class MfmTrack
     end
 
     puts "Stage 5: abnormally long pulse followed by abnormally short pulse".green
-
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
@@ -511,6 +508,8 @@ class MfmTrack
       break if changes_made == 0
       puts "Changes made: ".yellow + changes_made.to_s.white
     end
+
+    self.force_sync_pulse_length = sync_pulse_length
 
   end
 

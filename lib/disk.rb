@@ -14,7 +14,7 @@ class Disk
 
     Dir.glob(pattern).sort.each { |filename|
       track = MfmTrack.load(filename, debuglevel)
-      track.read_track
+      track.read
 
       msg = "Track #{track.track_no}, side #{track.side}, sectors read: #{track.successful_sectors}"
 
