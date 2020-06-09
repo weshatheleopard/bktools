@@ -57,6 +57,10 @@ require 'mag_reader' ; m = MagReader.new('tape.wav', 50); m.split_tape
 
 ```
 
+# Reading floppy disks
+
+Now this toolset supports [reading data from floppy disks](doc/floppy_disks.md).
+
 # Experimental features
 
 ## Display file as octal printout
