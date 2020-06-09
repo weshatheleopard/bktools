@@ -2,7 +2,7 @@
 
 For dloppy disks, the special hardware - [KryoFlux](https://www.kryoflux.com/) is used that scans the floppy disks and saves the exact timings between individual fluxes.
 
-## Reading the RAW file obtained from KtyoFlux software
+## Reading the RAW file obtained from KryoFlux software
 
 First, the file in KryoFlux's proprietary format is translated into a simple file containing numeric lengths of time between individial fluxes
 
@@ -43,7 +43,20 @@ Reader prints multiple diagnostic messages when processing the track. The level 
 track.debuglevel = <value>
 ```
 
-Most of the tracks read just finem, but for some floppies (generally in the area of tacks 30-40) timings may be off. To solve this, MfmTrack has built-in mechanism to "straighten out" the fluxes, and it tends to help in most situations. Generally, the good base pulse value tends to be 80, but 81 sometimes gives better results:
+The data stored on the track can be obtained by issuing the command:
+
+
+```
+track.read
+```
+
+It will process the flux sequence according to MFM format and and store the encountered sectors on the `track` object. They can be later obtained from
+
+```
+track.sectors
+```
+
+Most of the tracks read just fine, but for some floppies (generally in the area of tacks 30-40) timings may be off. To solve this, MfmTrack has built-in mechanism to "straighten out" the fluxes, and it tends to help in most situations. Generally, the good base pulse value tends to be 80, but 81 sometimes gives better results:
 
 ```
 track.cleanup(80)

@@ -443,11 +443,11 @@ class MfmTrack
           fluxes[i] -= 2
         end
       end
+      print "#{changes_made} ".white
       break if changes_made == 0
-      puts "Changes made: ".yellow + changes_made.to_s.white
     end
 
-    puts "Stage 2: long pulse surrounded by abnormally short pulses".green
+    puts '', 'Pass 2: long pulse surrounded by abnormally short pulses'.green
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
@@ -460,11 +460,12 @@ class MfmTrack
           fluxes[i+1] += 1
         end
       end
+
+      print "#{changes_made} ".white
       break if changes_made == 0
-      puts "Changes made: ".yellow + changes_made.to_s.white
     end
 
-    puts "Stage 3: abnormally short pulse followed by long pulses".green
+    puts '', "Pass 3: abnormally short pulse followed by long pulses".green
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
@@ -477,11 +478,12 @@ class MfmTrack
           fluxes[i+1] -= 1
         end
       end
-      puts "Changes made: ".yellow + changes_made.to_s.white
+
+      print "#{changes_made} ".white
       break if changes_made == 0
     end
 
-    puts "Stage 4: abnormally short pulse followed by abnormally long pulse".green
+    puts '', "Pass 4: abnormally short pulse followed by abnormally long pulse".green
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
@@ -491,11 +493,12 @@ class MfmTrack
           fluxes[i] -= 1
         end
       end
+
+      print "#{changes_made} ".white
       break if changes_made == 0
-      puts "Changes made: ".yellow + changes_made.to_s.white
     end
 
-    puts "Stage 5: abnormally long pulse followed by abnormally short pulse".green
+    puts '', "Pass 5: abnormally long pulse followed by abnormally short pulse".green
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
@@ -505,9 +508,12 @@ class MfmTrack
           fluxes[i] -= 1
         end
       end
+
+      print "#{changes_made} ".white
       break if changes_made == 0
-      puts "Changes made: ".yellow + changes_made.to_s.white
     end
+
+    puts
 
     self.force_sync_pulse_length = sync_pulse_length
 
