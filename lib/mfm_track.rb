@@ -103,9 +103,10 @@ class MfmTrack
     track = self.new(debuglevel)
 
     File.readlines(filename).each { |line|
+      line = line.chomp
       if line =~ /^-----\[(\d+)\]\s*$/ then
         track.indices << track.fluxes.size
-      elsif line =~ /^\s*(\d+)(\s*#.+)?$/ then
+      elsif line =~ /^\s*(\d+)\s*(#.+)?$/ then
         track.fluxes << $1.to_i
       elsif line =~ /^-----\((\d+(?:\.\d+)?)\)\s*$/ then
         track.force_sync_pulse_length = $1.to_f.round(1)
@@ -160,7 +161,7 @@ class MfmTrack
   def read_flux(ptr)
     index_no = indices.index(ptr)
     if index_no then
-      debug(20) { "----- Index marker #".magenta + index_no.to_s.white.bold + " @ ".magenta + ptr..to_s.white.bold }
+      debug(20) { "----- Index marker #".magenta + index_no.to_s.white.bold + " @ ".magenta + ptr.to_s.white.bold }
     end
     flux = fluxes[ptr]
     debug(30) { "     Next flux read: ".yellow + flux.to_s.white.bold + " @ ".yellow + ptr.to_s.white.bold }
@@ -279,9 +280,9 @@ class MfmTrack
     debug(4) { "  * Side:              ".blue.bold + side_read.to_s.bold }
     debug(4) { "  * Sector #:          ".blue.bold + sector_no.to_s.bold }
     debug(5) { "  * Sector size:       ".blue.bold + sector_size_code.to_s.bold }
-    debug(5) { "  * Computed checksum: " + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
-    debug(5) { "  * Read checksum:     " + Tools::zeropad(read_checksum.to_s(2), 16).bold }
-    debug(2) { "  * Header checksum:   " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
+    debug(5) { "  * Computed checksum: ".blue.bold + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
+    debug(5) { "  * Read checksum:     ".blue.bold + Tools::zeropad(read_checksum.to_s(2), 16).bold }
+    debug(2) { "  * Header checksum:   ".blue.bold + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
 
     if read_checksum == computed_checksum then
       if self.track_no.nil? then
@@ -295,9 +296,12 @@ class MfmTrack
       elsif self.side != side_read then
         debug(0) { "---!!! Side mismatch: existing #{self.side}, read #{side_read}".red }
       end
+
+      return [ ptr, track_read, side_read, sector_no, sector_size_code ]
+    else
+      return [ ptr ]
     end
 
-    [ ptr, track_read, side_read, sector_no, sector_size_code ]
   end
 
   def read_sector_data(ptr, sector_size)
@@ -340,9 +344,9 @@ class MfmTrack
     computed_checksum = Tools::crc_ccitt([0xA1, 0xA1, 0xA1, 0xFB] + data)
 
     debug(2) { "Sector data:" }
-    debug(5) { "  * Read checksum:     " + Tools::zeropad(read_checksum.to_s(2), 16).bold }
-    debug(5) { "  * Computed checksum: " + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
-    debug(2) { "  * Data checksum:     " + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
+    debug(5) { "  * Read checksum:     ".blue.bold + Tools::zeropad(read_checksum.to_s(2), 16).bold }
+    debug(5) { "  * Computed checksum: ".blue.bold + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
+    debug(2) { "  * Data checksum:     ".blue.bold + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
 
     [ ptr, data, read_checksum, computed_checksum ]
   end
@@ -351,7 +355,7 @@ class MfmTrack
     # Read just the sector headers
     ptr = 0
     loop {
-      ptr, track, side, sector = read_sector_header(ptr)
+      ptr, track, side, sector, sector_size_code = read_sector_header(ptr)
 
       break unless track.nil?
 

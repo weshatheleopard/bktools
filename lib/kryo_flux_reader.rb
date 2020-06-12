@@ -23,7 +23,7 @@ class KryoFluxReader
   # Each item in the track image array corresponds to a single rotation of the floppy disk.
   # Each track image may slightly differ due to hardware issues. We'll look into that later.
   def convert_track
-    @file_position = 0
+    @stream_position = @file_position = 0
     File.open(@filename, "rb") { |f| @stream = f.read.bytes }
 
     @track = MfmTrack.new(@debuglevel)
@@ -202,5 +202,5 @@ class KryoFluxReader
 
 end
 
-# f = KryoFluxReader.new('trk00.0.raw'); track = f.convert_track; 1
+# f = KryoFluxReader.new('temp/vortex32.0.raw');  track =f.convert_track; track.debuglevel = 15
 # KryoFluxReader::convert_disk('text1', 1)

@@ -9,7 +9,6 @@ First, the file in KryoFlux's proprietary format is translated into a simple fil
 ```
 reader = KryoFluxReader.new("track_filename.raw")
 track = reader.convert_track
-
 ```
 
 Once the track is converted, it can be saved for future use
