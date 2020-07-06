@@ -22,15 +22,11 @@ module Tools
   end
 
   def self.octal(bb)
-    ('000000' + bb.to_s(8))[-6..-1]
+    bb.to_s(8).rjust(6, '0')
   end
 
   def self.octal_byte(b)
-    ('000' + b.to_s(8))[-3..-1]
-  end
-
-  def self.zeropad(v, n)
-    ('0' * n + v)[-n..-1]
+    b.to_s(8).rjust(3, '0')
   end
 
   def self.string_to_byte_array(str)

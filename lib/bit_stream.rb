@@ -65,4 +65,13 @@ class BitStream
 
     return bytes
   end
+
+  def display
+    bytes = self.to_bytes
+
+    bytes.keys.sort.each { |k|
+      v = bytes[k]
+      puts "#{k.to_s.rjust(10)}: #{v} => #{Tools::byte2char(v.gsub('o', '0').to_i(2))}"
+    }
+  end
 end

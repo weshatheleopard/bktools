@@ -11,7 +11,7 @@ class DiskSector
   end
 
   def size
-    case @size_code
+    case (@size_code & 3) # Some "copy protections" have a different value in the header. FDD driver cares only about 2 least significant bits.
     when 1 then 256
     when 2 then 512
     when 3 then 1024

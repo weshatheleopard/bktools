@@ -1,4 +1,3 @@
-
 require 'wavefile'
 include WaveFile
 
@@ -9,6 +8,7 @@ class MfmTrack
   attr_accessor :fluxes, :indices
   attr_accessor :force_sync_pulse_length
   attr_accessor :debuglevel
+  attr_reader :sector_params
 
   def initialize(debuglevel = 0)
     @debuglevel = debuglevel
@@ -17,6 +17,8 @@ class MfmTrack
     @track_no = @side = nil
     @sync_pulse_length = nil
     @sectors = {}
+
+    @sector_params = {}
   end
 
   def side_code(bit)
@@ -116,6 +118,11 @@ class MfmTrack
     track
   end
 
+  def sync_pulse_length
+    return @force_sync_pulse_length if @force_sync_pulse_length
+    @sync_pulse_length
+  end
+
   def find_marker(ptr, max_distance = nil)
     endptr = ptr + max_distance if max_distance
 
@@ -145,9 +152,8 @@ class MfmTrack
 
           marker = fluxes[(ptr - 15)..(ptr - 1)]
           @sync_pulse_length = (marker.inject(:+) / 24.0).round(1)
-          @sync_pulse_length = @force_sync_pulse_length if @force_sync_pulse_length
 
-          debug(15) { "Sync pulse length = #{@sync_pulse_length}".magenta }
+          debug(15) { "Detected sync pulse length = #{@sync_pulse_length}".magenta }
           return(ptr - 16)
         end
       else
@@ -165,23 +171,27 @@ class MfmTrack
     end
     flux = fluxes[ptr]
     debug(30) { "     Next flux read: ".yellow + flux.to_s.white.bold + " @ ".yellow + ptr.to_s.white.bold }
+
+    if flux && (flux < (sync_pulse_length * 0.75)) then # No flux is supposed to be this short
+      debug(10) { "Format error: freshly red flux @ ".red + (ptr - 1).to_s.white.bold + " is too short: ".red + flux.to_s.white.bold }
+    end
+
     flux
   end
 
-  def read_mfm(ptr, len, start_state = nil, sync_pulse_length = nil)
-    @sync_pulse_length = sync_pulse_length if sync_pulse_length
+  def read_mfm(ptr, len, start_state = nil)
     bitstream = BitStream.new
 
     flux = read_flux(ptr)
 
     # If start state is not specified, we assume reading starts at the marker, which is preceded by a zero bit,
     # and that means pre-marker impulse oughtta be 1.5x
-    if (start_state.nil? && (flux < (@sync_pulse_length * 1.25)) || (start_state == 1)) then
+    if (start_state.nil? && (flux < (sync_pulse_length * 1.25)) || (start_state == 1)) then
       debug(15) { "Pre-maker pulse too short (".magenta + flux.to_s.white.bold + ") @".magenta + ptr.to_s.white.bold + ", lengthening".magenta }
-      flux = @sync_pulse_length * 1.5
-    elsif (flux > (@sync_pulse_length * 1.75)) then
+      flux = sync_pulse_length * 1.5
+    elsif (flux > (sync_pulse_length * 1.75)) then
       debug(15) { "Pre-maker pulse too long (".magenta + flux.to_s.white.bold + ") @".magenta + ptr.to_s.white.bold + ", shortening".magenta }
-      flux = @sync_pulse_length * 1.5
+      flux = sync_pulse_length * 1.5
     end
 
     ptr += 1
@@ -192,24 +202,24 @@ class MfmTrack
       flux = flux.round(1)
       debug(20) { "Flux: #{flux}" }
 
-      if flux > (@sync_pulse_length * 1.75) then # Special case - synhro A1 (10100O01)
-        debug(30) { "[" + "0o".bold + "] Current flux > 7/4 sync pulse. Special case of sector marker." }
+      if flux > (sync_pulse_length * 1.75) then # Special case - synhro A1 (10100O01)
+        debug(30) { "[" + "0o".bold + "] Current flux > 7/4 sync pulse. Special case of sector marker.".magenta }
         bitstream.push(ptr, '0o')
         flux = read_flux(ptr)
         ptr += 1
         leftover = false
-      elsif flux > @sync_pulse_length then
+      elsif flux > sync_pulse_length then # Probably should be * 1.25 here
         debug(30) { "[" + "0".bold + "]  Current flux longer than sync pulse." }
         bitstream.push(ptr, '0')
-        flux = flux - @sync_pulse_length
+        flux = flux - sync_pulse_length
         leftover = true
-      elsif flux > (@sync_pulse_length * 0.75) then
+      elsif flux > (sync_pulse_length * 0.75) then
         debug(30) { "[" + "0".bold + "]  Current flux between 3/4 and 1 sync pulse, stretching it to full." }
         bitstream.push(ptr, '0')
         flux = read_flux(ptr)
         ptr += 1
         leftover = false
-      elsif flux < (@sync_pulse_length * 0.25) then # Tiny reminder of previous flux
+      elsif flux < (sync_pulse_length * 0.25) then # Tiny reminder of previous flux
         debug(30) { "     Current flux less than 1/4 sync pulse, considering it a remainder of a previous flux" }
         flux = read_flux(ptr)
         ptr += 1
@@ -219,14 +229,14 @@ class MfmTrack
 
         if !leftover then
           debug(10) { "Format error: freshly red flux @ ".red + (ptr - 1).to_s.white.bold + " is too short: ".red + flux.to_s.white.bold + ". Expanding to full flux.".red }
-          flux = @sync_pulse_length
+          flux = sync_pulse_length
         end
 
         bitstream.push(ptr, '1')
         flux = read_flux(ptr)
         return(:EOF) if flux.nil?
         ptr += 1
-        flux = flux - (@sync_pulse_length / 2)
+        flux = flux - (sync_pulse_length / 2)
         leftover = true
       end
 
@@ -279,9 +289,9 @@ class MfmTrack
     debug(3) { "  * Track:             ".blue.bold + track_read.to_s.bold }
     debug(4) { "  * Side:              ".blue.bold + side_read.to_s.bold }
     debug(4) { "  * Sector #:          ".blue.bold + sector_no.to_s.bold }
-    debug(5) { "  * Sector size:       ".blue.bold + sector_size_code.to_s.bold }
-    debug(5) { "  * Computed checksum: ".blue.bold + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
-    debug(5) { "  * Read checksum:     ".blue.bold + Tools::zeropad(read_checksum.to_s(2), 16).bold }
+    debug(5) { "  * Sector size code:  ".blue.bold + sector_size_code.to_s.bold }
+    debug(5) { "  * Computed checksum: ".blue.bold + computed_checksum.to_s(2).rjust(16, '0').bold }
+    debug(5) { "  * Read checksum:     ".blue.bold + read_checksum.to_s(2).rjust(16, '0').bold }
     debug(2) { "  * Header checksum:   ".blue.bold + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
 
     if read_checksum == computed_checksum then
@@ -296,7 +306,6 @@ class MfmTrack
       elsif self.side != side_read then
         debug(0) { "---!!! Side mismatch: existing #{self.side}, read #{side_read}".red }
       end
-
       return [ ptr, track_read, side_read, sector_no, sector_size_code ]
     else
       return [ ptr ]
@@ -344,8 +353,8 @@ class MfmTrack
     computed_checksum = Tools::crc_ccitt([0xA1, 0xA1, 0xA1, 0xFB] + data)
 
     debug(2) { "Sector data:" }
-    debug(5) { "  * Read checksum:     ".blue.bold + Tools::zeropad(read_checksum.to_s(2), 16).bold }
-    debug(5) { "  * Computed checksum: ".blue.bold + Tools::zeropad(computed_checksum.to_s(2), 16).bold }
+    debug(5) { "  * Read checksum:     ".blue.bold + read_checksum.to_s(2).rjust(16, '0').bold }
+    debug(5) { "  * Computed checksum: ".blue.bold + computed_checksum.to_s(2).rjust(16, '0').bold }
     debug(2) { "  * Data checksum:     ".blue.bold + ((read_checksum == computed_checksum) ? 'success'.green : 'failed'.red) }
 
     [ ptr, data, read_checksum, computed_checksum ]
@@ -416,6 +425,30 @@ class MfmTrack
     ptr
   end
 
+
+  # Find locations of sectors in the track for manual review
+  def detect_sectors
+    ptr = 0
+    @sector_params = {}
+
+    loop do
+      header_marker_ptr = find_marker(ptr)
+      break if header_marker_ptr == :EOF
+      ptr, track_no, side, sector_no, sector_size_code = read_sector_header(header_marker_ptr)
+
+      if track_no then
+        data_marker_ptr = find_marker(ptr, 400)
+        if data_marker_ptr then
+          @sector_params[sector_no] ||=[]
+          @sector_params[sector_no] << data_marker_ptr
+          ptr = data_marker_ptr + 16
+        end
+      end
+    end
+
+    @sector_params
+  end
+
   def debug(msg_level)
     return if msg_level > @debuglevel
     msg = yield
@@ -434,7 +467,7 @@ class MfmTrack
 
   # For not so well scanned tracks: attempt to straighten the signal
   def cleanup(sync_pulse_length)
-    puts "Stage 1: abnormally long pulse surrounded by abnormally short pulses".green
+    puts "Pass 1: abnormally long pulse surrounded by abnormally short pulses".green
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
