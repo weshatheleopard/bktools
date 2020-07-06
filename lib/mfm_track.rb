@@ -60,9 +60,7 @@ class MfmTrack
         f.puts "-----[#{idx_no + 1}]" if idx_no
 
         str = '%4i' % flux
-        if with_line_numbers then
-          str << ' # %05i' % pos
-        end
+        str << ' # %05i' % pos if with_line_numbers
 
         f.puts str
         break if max_len && (pos > max_len)
