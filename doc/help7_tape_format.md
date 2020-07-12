@@ -1,6 +1,6 @@
 ## A non-standard tape format 'HELP7'
 
-The file is splits into multiple "blocks", each having their own independent checksum. That allows erroneous blocks from one copy of the file to be picked up from another copy. Also, this format did not use sync bits, but instead utilized pulses of varying length, each encoding 2-bit "nibbles"; shorter impulses corresponded to the nibbles that appeared most often in a particular block. That led to further speeding up reading/writing.
+The file is split into multiple "blocks", each having their own independent checksum. That allows erroneous blocks from one copy of the file to be picked up from another copy. Also, this format did not use sync bits, but instead utilized pulses of varying length, each encoding 2-bit "nibbles"; shorter impulses corresponded to the nibbles that appeared most often in a particular block. That led to further speeding up reading/writing.
 
 File header completely matched the standard file header, which allowed the file names to be displayed just fine when reviewing the tape.
 
@@ -11,10 +11,13 @@ File name:
 {
   * Bytes 0-12: File name
   * Byte 13:    '&' (38d, 0o46) - marker of 'HELP7' format
-  * Byte 14-15: length of HELP7 block. The format supported blocks of diffrent length, but in reality length of 0o400 (256d) was seemingly the only one ever used.
+  * Byte 14-15: length of HELP7 block in this file(*).
 }
 
 ```
+
+(*) The format itself supported blocks of varying lengths, but in reality it seems that 0o400 (256d) was the only length ever used.
+
 Block sequence
 ```
 {
@@ -25,6 +28,19 @@ Block sequence
   * nibble period * (4 * block length) - block data
 }
 
+```
+Nibble mapping:
+
+```
+Bits in byte: 76543210    correspond to the period of length:
+              |||||||+---       < 1.5 of sync tone period (most significant bit)
+              ||||||+----       < 1.5 of sync tone period (least significant bit)
+              |||||+----- 1.5 ... 2.5 of sync tone period (most significant bit)
+              ||||+------ 1.5 ... 2.5 of sync tone period (least significant bit)
+              |||+------- 2.5 ... 3.5 of sync tone period (most significant bit)
+              ||+-------- 2.5 ... 3.5 of sync tone period (least significant bit)
+              |+---------       > 3.5 of sync tone period (most significant bit)
+              +----------       > 3.5 of sync tone period (least significant bit)
 ```
 File sequence:
 ```

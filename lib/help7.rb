@@ -161,17 +161,7 @@ module Help7
                 (this_block_nibbles & 060) >> 4,
                 (this_block_nibbles & 0300) >> 6 ]
 
-    # Nibbles that correspond to a period (measured in length of a period of the pilot tone):
-
-    # byte: 76543210
-    #       |||||||+---       < 1.5 of sync tone period, most significant bit
-    #       ||||||+----       < 1.5 of sync tone period, least significant bit
-    #       |||||+----- 1.5 ... 2.5 of sync tone period, most significant bit
-    #       ||||+------ 1.5 ... 2.5 of sync tone period, least significant bit
-    #       |||+------- 2.5 ... 3.5 of sync tone period, most significant bit
-    #       ||+-------- 2.5 ... 3.5 of sync tone period, least significant bit
-    #       |+---------       > 3.5 of sync tone period, most significant bit
-    #       +----------       > 3.5 of sync tone period, least significant bit
+    # For nibble mapping explanation, see the supplied documentation (or read the code)
 
     current_block.owner_file_checksum = @bk_file.checksum
     current_block.checksum = Tools::bytes2word(block_header_array[2], block_header_array[3])
