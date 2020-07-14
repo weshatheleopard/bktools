@@ -70,7 +70,6 @@ To manually review contents of a sector (if it has been successfuly read, of cou
 > sector = track.sectors[8]
 > sector.display
 
-irb(main):022:0> track.sectors[8].display
 000000: 010000 040510 052513 040516 053056 052130 020040 020040  ..HAKUNA.VXT
 000020: 002473 000003 024034 002613 000000 162760 167363 027351  ;....(....оеямх.
 000040: 054126 020124 020040 020040 002476 000005 024034 004177  VXT     >....(.
