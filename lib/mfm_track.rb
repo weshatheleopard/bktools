@@ -163,6 +163,12 @@ class MfmTrack
   end
 
   def read_flux(ptr)
+    if @remainder then # Special case of 2.5x pulse aberration at the end of the block marker
+      flux = @remainder
+      @remainder = nil
+      return flux, ptr + 1
+    end
+
     index_no = indices.index(ptr)
     if index_no then
       debug(20) { "----- Index marker #".magenta + index_no.to_s.white.bold + " @ ".magenta + ptr.to_s.white.bold }
@@ -170,17 +176,26 @@ class MfmTrack
     flux = fluxes[ptr]
     debug(30) { "     Next flux read: ".yellow + flux.to_s.white.bold + " @ ".yellow + ptr.to_s.white.bold }
 
-    if flux && (flux < (sync_pulse_length * 0.75)) then # No flux is supposed to be this short
-      debug(10) { "Format error: freshly red flux @ ".red + (ptr - 1).to_s.white.bold + " is too short: ".red + flux.to_s.white.bold }
+    if flux then
+      if flux < (sync_pulse_length * 0.75) then # No flux is supposed to be this short
+        debug(10) { "Format error: freshly red flux @ ".red + (ptr - 1).to_s.white.bold + " is too short: ".red + flux.to_s.white.bold }
+      elsif (flux > (2.25 * sync_pulse_length)) && (flux < (2.75 * sync_pulse_length)) then
+        corrected_flux = (sync_pulse_length * 1.5).round(1)
+        @remainder = flux - corrected_flux
+
+        debug(10) { "Performing marker correction @ ".red + (ptr - 1).to_s.white.bold + ": original flux too long: ".red + flux.to_s.white.bold +
+                    ", breaking into " + corrected_flux.to_s.white.bold + " and " + @remainder.to_s.white.bold }
+        return corrected_flux, ptr
+      end
     end
 
-    flux
+    return flux, ptr + 1
   end
 
   def read_mfm(ptr, len, start_state = nil)
     bitstream = BitStream.new
 
-    flux = read_flux(ptr)
+    flux, ptr = read_flux(ptr)
 
     # If start state is not specified, we assume reading starts at the marker, which is preceded by a zero bit,
     # and that means pre-marker impulse oughtta be 1.5x
@@ -192,7 +207,7 @@ class MfmTrack
       flux = sync_pulse_length * 1.5
     end
 
-    ptr += 1
+#    ptr += 1
     leftover = false
 
     loop do
@@ -203,8 +218,7 @@ class MfmTrack
       if flux > (sync_pulse_length * 1.75) then # Special case - synhro A1 (10100O01)
         debug(30) { "[" + "0o".bold + "] Current flux > 7/4 sync pulse. Special case of sector marker.".magenta }
         bitstream.push(ptr, '0o')
-        flux = read_flux(ptr)
-        ptr += 1
+        flux, ptr = read_flux(ptr)
         leftover = false
       elsif flux > sync_pulse_length then # Probably should be * 1.25 here
         debug(30) { "[" + "0".bold + "]  Current flux longer than sync pulse." }
@@ -214,13 +228,11 @@ class MfmTrack
       elsif flux > (sync_pulse_length * 0.75) then
         debug(30) { "[" + "0".bold + "]  Current flux between 3/4 and 1 sync pulse, stretching it to full." }
         bitstream.push(ptr, '0')
-        flux = read_flux(ptr)
-        ptr += 1
+        flux, ptr = read_flux(ptr)
         leftover = false
       elsif flux < (sync_pulse_length * 0.25) then # Tiny reminder of previous flux
         debug(30) { "     Current flux less than 1/4 sync pulse, considering it a remainder of a previous flux" }
-        flux = read_flux(ptr)
-        ptr += 1
+        flux, ptr = read_flux(ptr)
         leftover = false
       else
         debug(30) { "[" + "1".bold + "]  Current flux between 1/4 and 3/4 sync pulse." }
@@ -231,9 +243,8 @@ class MfmTrack
         end
 
         bitstream.push(ptr, '1')
-        flux = read_flux(ptr)
+        flux, ptr = read_flux(ptr)
         return(:EOF) if flux.nil?
-        ptr += 1
         flux = flux - (sync_pulse_length / 2)
         leftover = true
       end
