@@ -551,7 +551,7 @@ class MfmTrack
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
         flux = fluxes[i]
-        if (flux > (2.25 * sync_pulse_length)) && (flux < (2.75 * sync_pulse_length)) then
+        if (flux > (2.25 * sync_pulse_length)) && (flux < (3.25 * sync_pulse_length)) then
           fluxes.insert(i, 1.5 * sync_pulse_length)
           fluxes[i + 1] = flux - (1.5 * sync_pulse_length)
           changes_made = 1
