@@ -163,12 +163,6 @@ class MfmTrack
   end
 
   def read_flux(ptr)
-    if @remainder then # Special case of 2.5x pulse aberration at the end of the block marker
-      flux = @remainder
-      @remainder = nil
-      return flux, ptr + 1
-    end
-
     index_no = indices.index(ptr)
     if index_no then
       debug(20) { "----- Index marker #".magenta + index_no.to_s.white.bold + " @ ".magenta + ptr.to_s.white.bold }
@@ -179,13 +173,6 @@ class MfmTrack
     if flux then
       if flux < (sync_pulse_length * 0.75) then # No flux is supposed to be this short
         debug(10) { "Format error: freshly red flux @ ".red + (ptr - 1).to_s.white.bold + " is too short: ".red + flux.to_s.white.bold }
-      elsif (flux > (2.25 * sync_pulse_length)) && (flux < (2.75 * sync_pulse_length)) then
-        corrected_flux = (sync_pulse_length * 1.5).round(1)
-        @remainder = flux - corrected_flux
-
-        debug(10) { "Performing marker correction @ ".red + (ptr - 1).to_s.white.bold + ": original flux too long: ".red + flux.to_s.white.bold +
-                    ", breaking into " + corrected_flux.to_s.white.bold + " and " + @remainder.to_s.white.bold }
-        return corrected_flux, ptr
       end
     end
 
@@ -552,6 +539,22 @@ class MfmTrack
           changes_made += 1
           fluxes[i + 1] += 1
           fluxes[i] -= 1
+        end
+      end
+
+      print "#{changes_made} ".white
+      break if changes_made == 0
+    end
+
+    puts '', "Pass 6: 2.5x pulses".green
+    loop do
+      changes_made = 0
+      (1..(fluxes.size - 2)).each do |i|
+        flux = fluxes[i]
+        if (flux > (2.25 * sync_pulse_length)) && (flux < (2.75 * sync_pulse_length)) then
+          fluxes.insert(i, 1.5 * sync_pulse_length)
+          fluxes[i + 1] = flux - (1.5 * sync_pulse_length)
+          changes_made = 1
         end
       end
 
