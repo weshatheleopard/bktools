@@ -71,7 +71,9 @@ class BitStream
 
     bytes.keys.sort.each { |k|
       v = bytes[k]
-      puts "#{k.to_s.rjust(10)}: #{v} => #{Tools::byte2char(v.gsub('o', '0').to_i(2))}"
+      b = v.gsub('o', '0').to_i(2)
+
+      puts "%10i: | %8s | %02x | %03o | %1s" % [ k, v, b, b, Tools::byte2char(b) ]
     }
   end
 end

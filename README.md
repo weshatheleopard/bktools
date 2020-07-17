@@ -1,15 +1,15 @@
 # bktools
 All kinds of tools for BK-0010 (my personal project open for public to see)
 
-# Standard (ROM) tape format
+## Standard (ROM) tape format
 
-Unlike some other renditions, this desccription has been derived from the analysis of the actual BK-0010 firmware.
+Unlike some other renditions, this description has been derived from the analysis of the actual BK-0010 firmware.
 
 The code that supports this format is located in the computer's ROM. No additional software is required to handle it.
 
 [Description of standard tape format](doc/bk_tape_format.md).
 
-# Accelerated (HELP7) tape format
+## Accelerated tape format "HELP7"
 
 This format was supported by a number of application programs that had to be loaded first.
 

@@ -21,7 +21,7 @@ class DiskSector
 
   BYTES_PER_LINE = 16
 
-  def display
+  def display(type = nil)
     if data.nil? then
       puts "----- No data to display -----"
       return
@@ -42,7 +42,15 @@ class DiskSector
       end
 
       if b0 && b1 then
-        data_str << Tools::octal(Tools::bytes2word(b0, b1)) << ' '
+        case type
+        when :bytes then
+          data_str << Tools::octal_byte(b0) << ' ' << Tools::octal_byte(b1) << ' '
+        when :hex then
+          data_str << ('%02x' % b0) << ' ' << ('%02x' % b1)  << ' '
+        else
+          data_str << Tools::octal(Tools::bytes2word(b0, b1)) << ' '
+        end
+
         b0 = b1 = nil
       end
 

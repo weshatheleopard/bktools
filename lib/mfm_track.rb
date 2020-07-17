@@ -106,7 +106,7 @@ class MfmTrack
       line = line.chomp
       if line =~ /^-----\[(\d+)\]\s*$/ then
         track.indices << track.fluxes.size
-      elsif line =~ /^\s*(\d+)\s*(#.+)?$/ then
+      elsif line =~ /^\s*(\d+)\s*(#.*)?$/ then
         track.fluxes << $1.to_i
       elsif line =~ /^-----\((\d+(?:\.\d+)?)\)\s*$/ then
         track.force_sync_pulse_length = $1.to_f.round(1)
