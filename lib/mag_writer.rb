@@ -21,7 +21,6 @@ class MagWriter
   SOBS_TO_PULSES_COEFF = 3.3
 
   def initialize(bk_file)
-    @bit_length = 10
     @bk_file = bk_file
   end
 
