@@ -8,10 +8,12 @@ class MfmTrack
   attr_accessor :fluxes, :indices
   attr_accessor :force_sync_pulse_length
   attr_accessor :debuglevel
+  attr_accessor :sectors_per_track
   attr_reader :sector_params
 
-  def initialize(debuglevel = 0)
+  def initialize(debuglevel = 0, sectors: 10)
     @debuglevel = debuglevel
+    @sectors_per_track = sectors
     @fluxes = []
     @indices = []
     @track_no = @side = nil
@@ -99,8 +101,8 @@ class MfmTrack
   end
 =end
 
-  def self.load(filename, debuglevel = 0)
-    track = self.new(debuglevel)
+  def self.load(filename, debuglevel = 0, cleanup: nil, sectors: 10)
+    track = self.new(debuglevel, sectors: sectors)
 
     File.readlines(filename).each { |line|
       line = line.chomp
@@ -113,6 +115,7 @@ class MfmTrack
       end
     }
 
+    track.cleanup(cleanup) if cleanup
     track
   end
 
@@ -413,7 +416,7 @@ class MfmTrack
         self.sectors[sector.number] = sector
       end
 
-      break if successful_sectors == 10 # FIXME: account for other size sectors
+      break if successful_sectors == self.sectors_per_track
     end
 
     debug(3) { "Track #".green + track_no.to_s.white.bold +
@@ -458,12 +461,12 @@ class MfmTrack
 
   # FIXME: Add handling of different size sectors
   def complete?
-    successful_sectors == 10
+    successful_sectors == self.sectors_per_track
   end
 
   # For not so well scanned tracks: attempt to straighten the signal
   def cleanup(sync_pulse_length)
-    puts "Pass 1: abnormally long pulse surrounded by abnormally short pulses".green
+    debug(5) { "Pass 1: abnormally long pulse surrounded by abnormally short pulses".green }
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
@@ -476,11 +479,11 @@ class MfmTrack
           fluxes[i] -= 2
         end
       end
-      print "#{changes_made} ".white
+      debug(5) { "#{changes_made} ".white }
       break if changes_made == 0
     end
 
-    puts '', 'Pass 2: long pulse surrounded by abnormally short pulses'.green
+    debug(5) { "\nPass 2: long pulse surrounded by abnormally short pulses".green }
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
@@ -494,11 +497,11 @@ class MfmTrack
         end
       end
 
-      print "#{changes_made} ".white
+      debug(5) { "#{changes_made} ".white }
       break if changes_made == 0
     end
 
-    puts '', "Pass 3: abnormally short pulse followed by long pulses".green
+    debug(5) { "\nPass 3: abnormally short pulse followed by long pulses".green }
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
@@ -512,11 +515,11 @@ class MfmTrack
         end
       end
 
-      print "#{changes_made} ".white
+      debug(5) { "#{changes_made} ".white }
       break if changes_made == 0
     end
 
-    puts '', "Pass 4: abnormally short pulse followed by abnormally long pulse".green
+    debug(5) { "\nPass 4: abnormally short pulse followed by abnormally long pulse".green }
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
@@ -527,11 +530,11 @@ class MfmTrack
         end
       end
 
-      print "#{changes_made} ".white
+      debug(5) { "#{changes_made} ".white }
       break if changes_made == 0
     end
 
-    puts '', "Pass 5: abnormally long pulse followed by abnormally short pulse".green
+    debug(5) { "\nPass 5: abnormally long pulse followed by abnormally short pulse".green }
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
@@ -542,11 +545,11 @@ class MfmTrack
         end
       end
 
-      print "#{changes_made} ".white
+      debug(5) { "#{changes_made} ".white }
       break if changes_made == 0
     end
 
-    puts '', "Pass 6: 2.5x pulses".green
+    debug(5) { "\nPass 6: 2.5x pulses".green }
     loop do
       changes_made = 0
       (1..(fluxes.size - 2)).each do |i|
@@ -558,14 +561,11 @@ class MfmTrack
         end
       end
 
-      print "#{changes_made} ".white
+      debug(5) { "#{changes_made} ".white }
       break if changes_made == 0
     end
 
-    puts
-
     self.force_sync_pulse_length = sync_pulse_length
-
   end
 
 end
