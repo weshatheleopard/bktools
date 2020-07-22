@@ -1,9 +1,11 @@
+# Miscellaneous helper methods
+
 module Tools
 
-  def self.bytes2words
+  def self.bytes2words(input_array)
     word_array = []
 
-    arr = @body_array.dup
+    arr = input_array.dup
     sz = arr.size
     sz += 1 if sz.odd?
     sz = sz / 2
@@ -27,10 +29,6 @@ module Tools
 
   def self.octal_byte(b)
     b.to_s(8).rjust(3, '0')
-  end
-
-  def self.string_to_byte_array(str)
-    str.each_byte.collect { |x| x }
   end
 
   def self.word_to_byte_array(word)

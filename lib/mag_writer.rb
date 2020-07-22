@@ -36,7 +36,7 @@ class MagWriter
 
     header_array = Tools::word_to_byte_array(@bk_file.start_address) +
                      Tools::word_to_byte_array(@bk_file.length) +
-                     Tools::string_to_byte_array(@bk_file.name)
+                     @bk_file.name.each_byte.to_a
 
     write_marker(0o10000)
     write_marker(8)
