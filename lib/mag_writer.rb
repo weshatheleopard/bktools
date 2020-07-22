@@ -3,8 +3,6 @@ require 'term/ansicolor'
 include Term::ANSIColor
 
 class MagWriter
-  include WaveFile
-
   attr_accessor :bk_file
 
   ZERO_LEVEL = 15000
@@ -27,11 +25,11 @@ class MagWriter
   def write(filename)
     write_to_buffer
 
-    Writer.new(filename, Format.new(:mono, :pcm_8, 44100)) { |writer| writer.write(@buffer) }
+    WaveFile::Writer.new(filename, WaveFile::Format.new(:mono, :pcm_8, 44100)) { |writer| writer.write(@buffer) }
   end
 
   def write_to_buffer
-    @buffer = Buffer.new([ ], Format.new(:mono, :pcm_16, 44100))
+    @buffer = WaveFile::Buffer.new([ ], WaveFile::Format.new(:mono, :pcm_16, 44100))
 
     header_array = Tools::word_to_byte_array(@bk_file.start_address) +
                      Tools::word_to_byte_array(@bk_file.length) +
@@ -86,7 +84,7 @@ class MagWriter
 
   # Give the waveform a sine shape so it doesn't sound nearly as bad. Purely cosmetic method.
   def soften
-    softened_buffer = Buffer.new([ ], Format.new(:mono, :pcm_16, 44100))
+    softened_buffer = WaveFile::Buffer.new([ ], WaveFile::Format.new(:mono, :pcm_16, 44100))
     i = start = volume = 0
     state = :pos
 
