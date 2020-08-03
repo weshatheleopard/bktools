@@ -55,7 +55,7 @@ class DiskSector
       end
 
       if (i % BYTES_PER_LINE) == (BYTES_PER_LINE - 1) then
-        print_line(((i + 1) - BYTES_PER_LINE), data_str, char_str)
+        print_line(((i + 1) - BYTES_PER_LINE), data_str, char_str, type)
         data_str = ''
         char_str = ''
       end
@@ -68,8 +68,14 @@ class DiskSector
 
   end
 
-  def print_line(base_addr, data_str, char_str)
-    strlen = ((BYTES_PER_LINE / 2) * 7)
+  def print_line(base_addr, data_str, char_str, type)
+    strlen =
+      case type
+      when :bytes then ((BYTES_PER_LINE) * 4)
+      when :hex then ((BYTES_PER_LINE) * 3)
+      else ((BYTES_PER_LINE / 2) * 7)
+      end
+
     data_str = (data_str + ' ' * strlen)[0...(strlen)]
     print Tools::octal(base_addr), ': ', data_str, ' ', char_str, "\n"
     data_str = ''

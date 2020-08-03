@@ -110,6 +110,8 @@ class MfmTrack
         track.indices << track.fluxes.size
       elsif line =~ /^\s*(\d+)\s*(#.*)?$/ then
         track.fluxes << $1.to_i
+      elsif line =~ /^\s*(\d+)\s+(\d+)\s+(\d+)\s*(#.*)?$/ then
+        track.fluxes << ($1.to_i + $2.to_i + $3.to_i)
       elsif line =~ /^-----\((\d+(?:\.\d+)?)\)\s*$/ then
         track.force_sync_pulse_length = $1.to_f.round(1)
       end

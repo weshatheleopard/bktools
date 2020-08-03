@@ -66,14 +66,31 @@ class BitStream
     return bytes
   end
 
-  def display
+  def display(track = nil)
+    fluxes = nil
     bytes = self.to_bytes
 
-    bytes.keys.sort.each { |k|
-      v = bytes[k]
+    arr_keys = bytes.keys.sort
+
+    arr_keys.each_index { |i|
+      pos = arr_keys[i]
+
+      if track then
+        endpos = arr_keys[i + 1]
+
+        if endpos then endpos = endpos - 1
+        else endpos = pos + 4
+        end
+
+        slice = []
+        pos.upto(endpos) { |i| slice << track.fluxes[i] }
+        fluxes = slice.compact.inspect
+      end
+
+      v = bytes[pos]
       b = v.gsub('o', '0').to_i(2)
 
-      puts "%10i: | %8s | %02x | %03o | %1s" % [ k, v, b, b, Tools::byte2char(b) ]
+      puts "%10i: | %8s | %02x | %03o | %1s | %s " % [ pos, v, b, b, Tools::byte2char(b), fluxes.to_s ]
     }
   end
 end
