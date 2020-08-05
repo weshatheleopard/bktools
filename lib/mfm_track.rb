@@ -126,6 +126,18 @@ class MfmTrack
     @sync_pulse_length
   end
 
+  def bucket(flux, spl = nil)
+    spl ||= sync_pulse_length
+
+    case
+    when flux > (spl * 2.25) then 999
+    when flux > (spl * 1.75) then 4
+    when flux > (spl * 1.25) then 3
+    when flux > (spl * 0.75) then 2
+    else 1
+    end
+  end
+
   def find_marker(ptr, max_distance = nil)
     endptr = ptr + max_distance if max_distance
 
@@ -137,15 +149,17 @@ class MfmTrack
       marker_candidate = fluxes[(ptr)..(ptr+4)]
       return(:EOF) if marker_candidate[4].nil?
 
-      sync_pulse_length = (marker_candidate.inject(:+)) / 8.0
+      sync_pulse_length_candidate = (marker_candidate.inject(:+)) / 8.0
 
-      if ((sync_pulse_length > 75) &&
-          (((sync_pulse_length * 1.75) < marker_candidate[0]) && (marker_candidate[0] < (sync_pulse_length * 2.25))) &&
-          (((sync_pulse_length * 1.25) < marker_candidate[1]) && (marker_candidate[1] < (sync_pulse_length * 1.75))) &&
-          (((sync_pulse_length * 1.75) < marker_candidate[2]) && (marker_candidate[2] < (sync_pulse_length * 2.25))) &&
-          (((sync_pulse_length * 1.25) < marker_candidate[3]) && (marker_candidate[3] < (sync_pulse_length * 1.75))) &&
-          (((sync_pulse_length * 0.75) < marker_candidate[4]) && (marker_candidate[4] < (sync_pulse_length * 1.25)))) then
+      if ((sync_pulse_length_candidate > 75) &&
+          (bucket(marker_candidate[0], sync_pulse_length_candidate) == 4) &&
+          (bucket(marker_candidate[1], sync_pulse_length_candidate) == 3) &&
+          (bucket(marker_candidate[2], sync_pulse_length_candidate) == 4) &&
+          (bucket(marker_candidate[3], sync_pulse_length_candidate) == 3) &&
+          (bucket(marker_candidate[4], sync_pulse_length_candidate) == 2)) then
+
         debug(15) { "Magic word (#{magic_counter}) found @ ".green + ptr.to_s.white.bold }
+        debug(30) { "  * Fluxes recognized as magic word: #{marker_candidate.inspect}" }
 
         ptr += 5
         magic_counter +=1
@@ -199,7 +213,6 @@ class MfmTrack
       flux = sync_pulse_length * 1.5
     end
 
-#    ptr += 1
     leftover = false
 
     loop do
@@ -376,6 +389,7 @@ class MfmTrack
     }
   end
 
+=begin
   def find_sync_pulse_length
     [ 80, 81, 79, 82, 80.5, 81.5, 79.5, 80.2, 80.4, 80.6, 80.8, 81.2, 79.8, 79.6, 81.4, 79.4, 81.6, 79.2, 81.8 ].each { |spl|
       self.force_sync_pulse_length = spl
@@ -385,6 +399,7 @@ class MfmTrack
     }
     return nil
   end
+=end
 
   def read(keep_bad_data = false)
     ptr = 0
