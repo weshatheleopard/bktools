@@ -110,6 +110,8 @@ class MfmTrack
         track.indices << track.fluxes.size
       elsif line =~ /^\s*(\d+)\s*(#.*)?$/ then
         track.fluxes << $1.to_i
+      elsif line =~ /^\s*(\d+)\s+(\d+)\s*(#.*)?$/ then
+        track.fluxes << ($1.to_i + $2.to_i)
       elsif line =~ /^\s*(\d+)\s+(\d+)\s+(\d+)\s*(#.*)?$/ then
         track.fluxes << ($1.to_i + $2.to_i + $3.to_i)
       elsif line =~ /^-----\((\d+(?:\.\d+)?)\)\s*$/ then
@@ -465,20 +467,27 @@ class MfmTrack
     @sector_params
   end
 
-  def debug(msg_level)
+  def debug(msg_level, newline: true)
     return if msg_level > @debuglevel
     msg = yield
-    puts(msg) if msg
+    return unless msg
+    if newline then
+      puts(msg)
+    else
+      print(msg)
+    end
   end
 
-  # FIXME: Add handling of different size sectors
   def successful_sectors
-    (1..10).count { |i| sectors[i] && sectors[i].valid? }
+    (1..self.sectors_per_track).count { |i| sectors[i] && sectors[i].valid? }
   end
 
-  # FIXME: Add handling of different size sectors
   def complete?
     successful_sectors == self.sectors_per_track
+  end
+
+  def sectors_read
+    sectors.keys.sort
   end
 
   # For not so well scanned tracks: attempt to straighten the signal
@@ -496,7 +505,7 @@ class MfmTrack
           fluxes[i] -= 2
         end
       end
-      debug(5) { "#{changes_made} ".white }
+      debug(5, newline: false) { "#{changes_made} ".white }
       break if changes_made == 0
     end
 
@@ -514,7 +523,7 @@ class MfmTrack
         end
       end
 
-      debug(5) { "#{changes_made} ".white }
+      debug(5, newline: false) { "#{changes_made} ".white }
       break if changes_made == 0
     end
 
@@ -532,7 +541,7 @@ class MfmTrack
         end
       end
 
-      debug(5) { "#{changes_made} ".white }
+      debug(5, newline: false) { "#{changes_made} ".white }
       break if changes_made == 0
     end
 
@@ -547,7 +556,7 @@ class MfmTrack
         end
       end
 
-      debug(5) { "#{changes_made} ".white }
+      debug(5, newline: false) { "#{changes_made} ".white }
       break if changes_made == 0
     end
 
@@ -562,7 +571,7 @@ class MfmTrack
         end
       end
 
-      debug(5) { "#{changes_made} ".white }
+      debug(5, newline: false) { "#{changes_made} ".white }
       break if changes_made == 0
     end
 
@@ -578,7 +587,7 @@ class MfmTrack
         end
       end
 
-      debug(5) { "#{changes_made} ".white }
+      debug(5, newline: false) { "#{changes_made} ".white }
       break if changes_made == 0
     end
 

@@ -63,7 +63,7 @@ class DiskSector
     }
 
     if !data_str.empty? then
-      print_line(i, data_str, char_str)
+      print_line(i, data_str, char_str, type)
     end
 
   end
