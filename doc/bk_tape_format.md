@@ -61,10 +61,12 @@ File sequence:
 {
   * marker sequence(4096d, 0)   - pilot marker
   * marker sequence(8d, 0)      - header marker
-  * byte sequence * 20d         - header data: address (2 bytes) + length (2 bytes) + file name (16d bytes)
+  * byte sequence * 2           - header data: file start address
+  * byte sequence * 2           - header data: file length
+  * byte sequence * 16d         - header data: file name
   * marker sequence(8d, 0)      - data marker
   * byte sequence * file length - file body data
   * byte sequence * 2           - checksum
-  * marker(256d, 256d)          - trailer pilot
+  * marker sequence(256d, 256d) - trailer marker
 }
 ```

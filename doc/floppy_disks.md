@@ -30,7 +30,7 @@ For ease of manual adjustments, the track can be saved with comments stating the
 > track.save "name_prefix", nil, true
 ```
 
-Once the track is saved, `raw` files are no longer needed, and `trk` files can be loaded read from the disk:
+Once the track is saved, `raw` files are no longer needed, and `trk` files can be loaded from the disk:
 ```
 > track = MfmTrack.load("complete_file_name.trk")
 ```
