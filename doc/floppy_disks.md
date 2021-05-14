@@ -45,7 +45,7 @@ The data stored on the track can be obtained by issuing the command:
 > track.read
 ```
 
-It will process the flux sequence according to MFM format and and store the encountered sectors on the `track` object. They can be later obtained from
+It will process the flux sequence according to MFM format and store the encountered sectors on the `track` object. They can be later obtained from
 ```
 > track.sectors
 ```
@@ -55,7 +55,7 @@ Most of the tracks read just fine, but for some floppies (generally in the area 
 > track.cleanup(80)
 ```
 
-Disk represents a collection of tracks. In order to load all the track images (`.trk` files) from a directory and convert them into actual binary representation of the disk's sectors:`
+Disk represents a collection of tracks. In order to load all the track images (`.trk` files) from a directory and convert them into actual binary representation of the disk's sectors:
 ```
 > disk = Disk.load("some_directory")
 ```
