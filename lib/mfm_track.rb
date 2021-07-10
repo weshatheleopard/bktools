@@ -71,19 +71,14 @@ class MfmTrack
     }
   end
 
-#FIXME
-
-=begin
   def analyze(start = nil, len = nil)
-   sync_pulse_length = determine_sync_pulse_length(0)
+    sync_pulse_length = scan # Establish sync pulse length
 
     fluxes.each_with_index { |flux, pos|
       next if (start && (pos < start)) || (len && (pos > start + len))
 
-   indices.index(pos)
       idx_no = indices.index(pos)
       puts "-----[#{idx_no}]".yellow if idx_no
-
 
       s = "%4i # %07i" % [ flux, pos ]
 
@@ -99,7 +94,6 @@ class MfmTrack
       end
     }
   end
-=end
 
   def self.load(filename, debuglevel = 0, cleanup: nil, sectors: 10)
     track = self.new(debuglevel, sectors: sectors)
@@ -353,7 +347,7 @@ class MfmTrack
 
     data = sector.each_with_index.collect { |b, i|
         if b =~ /o/ then
-          debug(6) { "Format error: sector cotains a too long of a pulse @ ".red.bold + positions[i + 4].to_s.white.bold }
+          debug(6) { "Format error: sector contains a too long of a pulse @ ".red.bold + positions[i + 4].to_s.white.bold }
           0
         else b.to_i(2)
         end
@@ -382,16 +376,16 @@ class MfmTrack
     loop {
       ptr, track, side, sector, sector_size_code = read_sector_header(ptr)
 
-      break unless track.nil?
+      return @sync_pulse_length unless track.nil?
 
       if ptr == :EOF then
         debug(2) { "---End of track".red }
+        return :EOF
         break
       end
     }
   end
 
-=begin
   def find_sync_pulse_length
     [ 80, 81, 79, 82, 80.5, 81.5, 79.5, 80.2, 80.4, 80.6, 80.8, 81.2, 79.8, 79.6, 81.4, 79.4, 81.6, 79.2, 81.8 ].each { |spl|
       self.force_sync_pulse_length = spl
@@ -401,7 +395,6 @@ class MfmTrack
     }
     return nil
   end
-=end
 
   def read(keep_bad_data = false)
     ptr = 0
@@ -488,6 +481,19 @@ class MfmTrack
 
   def sectors_read
     sectors.keys.sort
+  end
+
+  def display
+    (1..@sectors_per_track).each { |sector_no|
+      puts "-----Side #{side}---Track #{'%02d' % track_no}---Sector #{'%02d' % sector_no}-----------------------------------------------".yellow
+      sector = sectors[sector_no]
+      if sector then
+        sector.display
+      else
+        puts "No data".red
+      end
+    }
+    puts "---------------------------------------------------------------------------------".yellow
   end
 
   # For not so well scanned tracks: attempt to straighten the signal
