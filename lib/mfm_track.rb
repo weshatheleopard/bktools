@@ -485,7 +485,10 @@ class MfmTrack
 
   def display
     (1..@sectors_per_track).each { |sector_no|
-      puts "-----Side #{side}---Track #{'%02d' % track_no}---Sector #{'%02d' % sector_no}-----------------------------------------------".yellow
+      puts "-----Side ".yellow + side.to_s.white.bold +
+        '---Track '.yellow + ('%02d' % track_no).white.bold +
+        '---Sector '.yellow + ('%02d' % sector_no).white.bold +
+        '------------------------------------------------'.yellow
       sector = sectors[sector_no]
       if sector then
         sector.display

@@ -78,3 +78,8 @@ To manually review contents of a sector (if it has been successfuly read, of cou
 000740: 000000 000000 000000 000000 000000 000000 000000 000000  ................
 000760: 000000 000000 000000 000000 000000 000000 000000 000000  ................
 ```
+
+Or you can view all the sectors available on the track:
+```
+> track.display
+```
