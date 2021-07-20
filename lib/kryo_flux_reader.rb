@@ -44,27 +44,23 @@ class KryoFluxReader
       when 0x00..0x07 then
         lsb = @stream[@file_position]
         add_flux((block_type << 8) + lsb, @stream_position)
-        @file_position += 1
-        @stream_position += 2
+        _advance(2)
       when 0x08 then # NOP1 block, skip 1 byte
-        @stream_position += 1
+        _advance(1)
       when 0x09 then # NOP2 block, skip 2 bytes
-        @stream_position += 2
-        @file_position += 1
+        _advance(2)
       when 0x0A then # NOP3 block, skip 3 bytes
-        @stream_position += 3
-        @file_position += 2
+        _advance(3)
       when 0x0B then
         raise "OVL16 block currently not supported"
       when 0x0C then # FLUX3 block
         add_flux((@stream[@file_position] << 8) + @stream[@file_position + 1], @stream_position)
-        @file_position += 2
-        @stream_position += 3
+        _advance(3)
       when 0x0D then
         break if out_of_stream_block
       when 0x0E..0xFF then
         add_flux(block_type, @stream_position)
-        @stream_position += 1
+        _advance(1)
       else
         raise "Unknown block type: %02x" % [block_type]
       end

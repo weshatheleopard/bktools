@@ -34,6 +34,7 @@ task :console, [:script] do |_t, args|
     }
   }
   require 'irb'
+  require 'irb/completion'
 
   # set the optional script to run
   IRB.conf[:SCRIPT] = args.script
