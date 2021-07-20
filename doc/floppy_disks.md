@@ -10,6 +10,11 @@ First, the file in KryoFlux's proprietary format is translated into a simple fil
 > track = reader.convert_track
 ```
 
+You can convert the entire disk (collection of tracks) located in the same directory, at once:
+```
+KryoFluxReader::convert_disk 'some_directory'
+```
+
 Once the track is converted, it can be saved for future use
 ```
 > track.save "name_prefix"

@@ -19,6 +19,12 @@ class KryoFluxReader
 
   # ==================== KryoFlux File Decoding ==================== #
  
+  def _advance(fluxes)
+    @stream_position += fluxes
+    @file_position += (fluxes - 1)
+  end
+  private :_advance
+
   # Take track file from KryoFlux and convert it to array of track images (arrays of flux lengths).
   # Each item in the track image array corresponds to a single rotation of the floppy disk.
   # Each track image may slightly differ due to hardware issues. We'll look into that later.
@@ -37,8 +43,7 @@ class KryoFluxReader
       case block_type
       when 0x00..0x07 then
         lsb = @stream[@file_position]
-        flux_val = (block_type << 8) + lsb
-        add_flux(flux_val, @stream_position)
+        add_flux((block_type << 8) + lsb, @stream_position)
         @file_position += 1
         @stream_position += 2
       when 0x08 then # NOP1 block, skip 1 byte
@@ -51,6 +56,10 @@ class KryoFluxReader
         @file_position += 2
       when 0x0B then
         raise "OVL16 block currently not supported"
+      when 0x0C then # FLUX3 block
+        add_flux((@stream[@file_position] << 8) + @stream[@file_position + 1], @stream_position)
+        @file_position += 2
+        @stream_position += 3
       when 0x0D then
         break if out_of_stream_block
       when 0x0E..0xFF then
@@ -156,7 +165,7 @@ class KryoFluxReader
     dword
   end
 
-  def self.convert_disk(dir, debuglevel = 0, fullscan = true)
+  def self.convert_disk(dir, debuglevel = 0, fullscan = false)
     full_path = Pathname.new(dir).realpath
     pattern = full_path.join("*.raw")
 
@@ -188,6 +197,8 @@ class KryoFluxReader
 
         end
       else
+        reader.debug(8) { 'Detecting track number and side designation'.blue.bold }
+
         track.scan
         track.save(filename)
       end
