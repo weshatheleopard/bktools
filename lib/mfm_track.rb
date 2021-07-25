@@ -483,7 +483,7 @@ class MfmTrack
     sectors.keys.sort
   end
 
-  def display
+  def display(type = nil)
     (1..@sectors_per_track).each { |sector_no|
       puts "-----Side ".yellow + side.to_s.white.bold +
         '---Track '.yellow + ('%02d' % track_no).white.bold +
@@ -491,7 +491,7 @@ class MfmTrack
         '------------------------------------------------'.yellow
       sector = sectors[sector_no]
       if sector then
-        sector.display
+        sector.display(type)
       else
         puts "No data".red
       end

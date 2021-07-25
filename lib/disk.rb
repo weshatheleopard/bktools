@@ -35,6 +35,7 @@ class Disk
     tracks.sort_by{ |track| track.track_no * 2 + track.side }.each { |track|
       (1..track.sectors_per_track).each { |sector_no|
         sector = track.sectors[sector_no]
+        next if sector.nil?
         sector.data.each { |c| str << c.chr }
       }
     }
