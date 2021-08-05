@@ -205,6 +205,9 @@ module Disassembler
       cmd = "ADD\t" + parse_operand((current_word >> 6) & 0o77) + ',' + parse_operand(current_word & 0o77)
     when 0o070000 then
       case (current_word & 0o177000)
+      when 0o074000 then
+        address = (start_address + @current_offset + 2 - ((current_word & 0o77) * 2))
+        cmd = "XOR\t" + parse_operand((current_word >> 6) & 0o7) + ',' + parse_operand(current_word & 0o77)
       when 0o077000 then
         newline = true
         address = (start_address + @current_offset + 2 - ((current_word & 0o77) * 2))
