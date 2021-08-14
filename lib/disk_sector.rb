@@ -3,7 +3,7 @@ class DiskSector
   attr_reader :number
   attr_reader :size_code
 
-  def initialize(number, size_code)
+  def initialize(number, size_code = nil)
     @number = number
     @size_code = size_code
     @read_checksum = nil
@@ -11,6 +11,8 @@ class DiskSector
   end
 
   def size
+    return 128 if @size_code.nil? # FM tracks
+
     case (@size_code & 3) # Some "copy protections" have a different value in the header. FDD driver cares only about 2 least significant bits.
     when 1 then 256
     when 2 then 512

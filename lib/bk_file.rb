@@ -4,9 +4,6 @@ include Term::ANSIColor
 require 'disassembler'
 include Disassembler
 
-require 'focal'
-include Focal
-
 require 'bk_image'
 include BkImage
 

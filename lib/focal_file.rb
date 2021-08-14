@@ -1,8 +1,10 @@
-module Focal
+require 'bk_file'
+
+class FocalFile < BkFile
 
   EOF_OFFSET = 0176026
 
-  def focal2txt
+  def convert_to_txt
     # Return nothing if the file is not a Focal program
     return nil if start_address != 01752
     offset = 0
