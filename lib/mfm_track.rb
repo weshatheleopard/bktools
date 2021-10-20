@@ -147,7 +147,7 @@ class MfmTrack
 
       sync_pulse_length_candidate = (marker_candidate.inject(:+)) / 8.0
 
-      if ((sync_pulse_length_candidate > 75) &&
+      if ((sync_pulse_length_candidate > 30) &&
           (bucket(marker_candidate[0], sync_pulse_length_candidate) == 4) &&
           (bucket(marker_candidate[1], sync_pulse_length_candidate) == 3) &&
           (bucket(marker_candidate[2], sync_pulse_length_candidate) == 4) &&
@@ -360,7 +360,7 @@ class MfmTrack
     end
 
     read_checksum = Tools::bytes2word(b_low, b_high)
-    computed_checksum = Tools::crc_ccitt([0xA1, 0xA1, 0xA1, 0xFB] + data)
+    computed_checksum = compute_data_checksum(data)
 
     debug(2) { "Sector data:" }
     debug(5) { "  * Read checksum:     ".blue.bold + read_checksum.to_s(2).rjust(16, '0').bold }
@@ -414,7 +414,7 @@ class MfmTrack
         break
       end
 
-      sector = DiskSector.new(sector_no, sector_size_code)
+      sector = DiskSector.new(sector_no, self, sector_size_code)
       next if sector.size.nil? # Start over if sector header is messed up
 
       ptr, data, read_checksum, computed_checksum = read_sector_data(ptr, sector.size)
@@ -435,7 +435,6 @@ class MfmTrack
                 ": total sectors read: ".green + successful_sectors.to_s.white.bold }
     ptr
   end
-
 
   # Find locations of sectors in the track for manual review
   def detect_sectors
@@ -497,6 +496,10 @@ class MfmTrack
       end
     }
     puts "---------------------------------------------------------------------------------".yellow
+  end
+
+  def compute_data_checksum(data)
+    Tools::crc_ccitt([0xA1, 0xA1, 0xA1, 0xFB] + data)
   end
 
   # For not so well scanned tracks: attempt to straighten the signal

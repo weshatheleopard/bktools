@@ -3,7 +3,8 @@ class DiskSector
   attr_reader :number
   attr_reader :size_code
 
-  def initialize(number, size_code = nil)
+  def initialize(number, parent_track, size_code = nil)
+    @parent_track = parent_track
     @number = number
     @size_code = size_code
     @read_checksum = nil
@@ -11,7 +12,7 @@ class DiskSector
   end
 
   def size
-    return 128 if @size_code.nil? # FM tracks
+    return 128 * 2 if @size_code.nil? # FM tracks
 
     case (@size_code & 3) # Some "copy protections" have a different value in the header. FDD driver cares only about 2 least significant bits.
     when 1 then 256
@@ -86,7 +87,7 @@ class DiskSector
 
   def valid?
     (data.size == self.size) &&
-      (self.read_checksum == Tools::crc_ccitt([0xA1, 0xA1, 0xA1, 0xFB] + self.data))
+      (self.read_checksum == @parent_track.compute_data_checksum(self.data))
   end
 
 end
