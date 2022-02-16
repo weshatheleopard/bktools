@@ -2,19 +2,20 @@ require 'wavefile'
 
 module WaveformFixer
   MIN_CORRECTION = 1000
+  MONO16BIT = WaveFile::Format.new(:mono, :pcm_16, 44100)
 
-  # This modiule contains experimental code for MagReader the is intended to repair files
+  # This modiule contains experimental code for MagReader that is intended to repair files
   #   that were imperfectly read from the tape (with offset reading head, etc.)
   # You should understand what you're doing to use this!
 
   # This method fixes the "floating zero-level line" problem, where impulses happen to be floating up and down.
   # After calling this method, the centerline will be straihtened and all impulses will be 0-centered.
   def straighten()
- #FIXME
+#FIXME
     original_buffer = nil
 
-    reader = WaveFile::Reader.new(@filename, WaveFile::Format.new(:mono, :pcm_16, 44100))
-    reader.each_buffer(1024*1024*1024) do |buffer|
+    reader = WaveFile::Reader.new(@filename, MONO16BIT)
+    reader.each_buffer(1024 * 1024 * 1024) do |buffer|
       debug(5) { "Loaded #{buffer.samples.length.to_s.bold} samples" }
       original_buffer = buffer
     end
@@ -26,9 +27,10 @@ module WaveformFixer
     prev = 0
 
     # This is where offset values will be stored. If needs be, this buffer can be saved.
-    offset_buffer = WaveFile::Buffer.new([ 0 ] * original_buffer.samples.size, WaveFile::Format.new(:mono, :pcm_16, 44100))
+    offset_buffer = WaveFile::Buffer.new([ 0 ] * original_buffer.samples.size, MONO16BIT)
 
     original_buffer.samples.each_with_index { |v, i|
+      # Do not allow jitter that happens when ADC is overloaded to throw the algorithm off; treat extreme readings as constant.
       if v > 30000 then v = 30000
       elsif v < -30000 then v = -30000
       end
@@ -57,7 +59,7 @@ module WaveformFixer
 
     fill_gaps(offset_buffer)
 
-    corrected_buffer = WaveFile::Buffer.new([ 0 ] * original_buffer.samples.size, WaveFile::Format.new(:mono, :pcm_16, 44100))
+    corrected_buffer = WaveFile::Buffer.new([ 0 ] * original_buffer.samples.size, MONO16BIT)
     corrected_buffer.samples.each_with_index { |v, i|
       corrected_value = original_buffer.samples[i] - offset_buffer.samples[i]
 
@@ -74,11 +76,11 @@ module WaveformFixer
 
     # Save the centerline offset buffer (so you can see how adjustment was applied)
 #    WaveFile::Writer.new(Pathname.new(base_path).join(file_name + "_offset" + file_ext).to_s,
-#                           WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(offset_buffer) }
+#                           MONO16BIT) { |writer| writer.write(offset_buffer) }
 
     # Save the corrected waveform
     WaveFile::Writer.new(Pathname.new(base_path).join(file_name + "_straightened" + file_ext).to_s,
-                           WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(corrected_buffer) }
+                           MONO16BIT) { |writer| writer.write(corrected_buffer) }
 
     corrected_buffer
   end
@@ -173,7 +175,7 @@ module WaveformFixer
 
     end
 
-    WaveFile::Writer.new("fixed.wav", WaveFile::Format.new(:mono, :pcm_16, 44100)) { |writer| writer.write(@buffer) }
+    WaveFile::Writer.new("fixed.wav", MONO16BIT) { |writer| writer.write(@buffer) }
 
   end
 =end

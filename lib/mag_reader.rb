@@ -147,7 +147,7 @@ attr_accessor :debug_bytes
   end
 
   def read_period_with_sync(ignore_length_errors = false)  # same as PERIOD:
-    sync_len = read_period  # Skip sync
+    sync_len = read_period  # Skip sync bit
 
     if !ignore_length_errors && (sync_len > @cutoff) then
       array_position = ", byte ##{@current_array.size}" if @current_array
@@ -155,7 +155,7 @@ attr_accessor :debug_bytes
       debug(1) { "WARNING:".bold + " sync bit too long (#{sync_len}) @ #{current_sample_position}#{array_position}".red }
     end
 
-    data_len = read_period  # Read data
+    data_len = read_period  # Read data bit
     if !ignore_length_errors && (data_len > (@length_of_0 * BIT_TOO_LONG)) then
       array_position = ", byte ##{@current_array.size}" if @current_array
 
