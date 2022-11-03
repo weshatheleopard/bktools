@@ -1,5 +1,8 @@
 # bktools
+{<img src="https://circleci.com/gh/weshatheleopard/bktools.svg?style=svg" alt="CircleCI" />}[https://circleci.com/gh/weshatheleopard/bktools]
 All kinds of tools for BK-0010 (my personal project open for public to see)
+
+
 
 ## Standard (ROM) tape format
 
