@@ -7,6 +7,8 @@ include Disassembler
 require 'bk_image'
 include BkImage
 
+require 'tools'
+
 class BkFile
 
   attr_accessor :start_address

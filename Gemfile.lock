@@ -1,17 +1,48 @@
 GEM
   remote: http://rubygems.org/
   specs:
+    diff-lcs (1.5.0)
+    docile (1.4.0)
+    rake (13.0.6)
+    rspec (3.12.0)
+      rspec-core (~> 3.12.0)
+      rspec-expectations (~> 3.12.0)
+      rspec-mocks (~> 3.12.0)
+    rspec-core (3.12.0)
+      rspec-support (~> 3.12.0)
+    rspec-expectations (3.12.0)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.12.0)
+    rspec-mocks (3.12.0)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.12.0)
+    rspec-support (3.12.0)
+    rspec_junit_formatter (0.6.0)
+      rspec-core (>= 2, < 4, != 2.12.0)
+    simplecov (0.21.2)
+      docile (~> 1.1)
+      simplecov-html (~> 0.11)
+      simplecov_json_formatter (~> 0.1)
+    simplecov-html (0.12.3)
+    simplecov_json_formatter (0.1.4)
+    sync (0.5.0)
     term-ansicolor (1.7.1)
       tins (~> 1.0)
-    tins (1.21.1)
-    wavefile (1.1.0)
+    tins (1.31.1)
+      sync
+    wavefile (1.1.1)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
+  bundler
+  rake
+  rspec
+  rspec_junit_formatter
+  simplecov
   term-ansicolor
   wavefile (~> 1)
 
 BUNDLED WITH
-   2.0.2
+   2.3.22
