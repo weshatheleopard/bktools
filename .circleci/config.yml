@@ -8,6 +8,7 @@ jobs:
     docker:
       # specify the version you desire here
       - image: cimg/ruby:2.6.6
+    resource_class: small
 
     working_directory: ~
 
