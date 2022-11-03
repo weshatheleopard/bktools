@@ -387,12 +387,21 @@ class MfmTrack
   end
 
   def find_sync_pulse_length
-    [ 80, 81, 79, 82, 80.5, 81.5, 79.5, 80.2, 80.4, 80.6, 80.8, 81.2, 79.8, 79.6, 81.4, 79.4, 81.6, 79.2, 81.8 ].each { |spl|
-      self.force_sync_pulse_length = spl
-      pos = self.read
+    center = self.scan
+    arr = [ center ]
 
+    1.upto(30) do |i|
+     arr << center + (0.1 * i)
+     arr << center - (0.1 * i)
+    end
+
+    arr.each { |spl|
+      self.force_sync_pulse_length  = spl
+      debug(1) { "Attempting: ".green + spl.round(1).to_s.yellow  }
+      self.read
       return spl if self.complete?
     }
+
     return nil
   end
 
