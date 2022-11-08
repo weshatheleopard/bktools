@@ -14,7 +14,7 @@ end
 
 
 describe TestFile do
-  context "With a zero-filled file" do
+  context "With a squential file" do
     subject do 
       f = BkFile.new
       f.start_address = 0o1000
@@ -27,8 +27,12 @@ describe TestFile do
       f
     end
 
-    it "should compute checksum" do        
+    it "should disassemble without labels" do        
       assert_value subject.disassemble_with_labels, log: 'spec/memory.mac'
+    end
+
+    it "should disassemble with labels" do        
+      assert_value subject.disassemble_with_labels, log: 'spec/memory_with_labels.mac'
     end
   end
 end
