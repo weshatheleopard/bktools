@@ -12,6 +12,7 @@
 *.wav
 *.bin
 *.metadata
+*.trk
 
 # Used by dotenv library to load environment variables.
 # .env

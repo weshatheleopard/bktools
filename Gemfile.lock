@@ -1,6 +1,7 @@
 GEM
   remote: http://rubygems.org/
   specs:
+    assert_value (1.5.5)
     diff-lcs (1.5.0)
     docile (1.4.0)
     rake (13.0.6)
@@ -36,6 +37,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  assert_value
   bundler
   rake
   rspec
