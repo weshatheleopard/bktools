@@ -23,7 +23,7 @@ module Disassembler
       @labels = {}      # Label corresponding to a particular address
       @references = {}  # Text indicating how to refer to a particular address
     when 3, nil
-      str = ''
+      str = +''
     end
 
     # TODO: currently start address must be even
@@ -34,22 +34,19 @@ module Disassembler
     @previous_command = ''
 
     while @current_offset < body.length do
-      oct = ''
       start_offset = @current_offset
       @acceptable_label_addresses << (start_address + @current_offset) if pass == 1
-      cmd, step, label = decode_command
+      current_command, step, label = decode_command
 
       next unless str
 
-      case step
-      when 2 then oct = Tools::octal(word_at(start_offset)) + '              '
-      when 4 then oct = Tools::octal(word_at(start_offset)) + ' ' + Tools::octal(word_at(start_offset + 2)) + '       '
-      when 6 then oct = Tools::octal(word_at(start_offset)) + ' ' + Tools::octal(word_at(start_offset + 2)) + ' ' + Tools::octal(word_at(start_offset + 4))
-      end
+      oct = Tools::octal(word_at(start_offset)) << ' '
+      oct << ((step > 2) ? Tools::octal(word_at(start_offset + 2)) : '      ') << ' '
+      oct << ((step > 4) ? Tools::octal(word_at(start_offset + 4)) : '      ')
 
       label += ':' unless label.nil? || (label == '')
-      str += "#{Tools::octal(start_address + start_offset)}: #{oct}\t#{label}\t#{cmd}\n"
-      str += "\n" if cmd =~ /^(JMP|RTS|RET|BR|SOB)/
+      str << "#{Tools::octal(start_address + start_offset)}: #{oct}\t#{label}\t#{current_command}\n"
+      str << "\n" if current_command =~ /^(JMP|RTS|RET|BR|SOB)/
     end
 
     str
