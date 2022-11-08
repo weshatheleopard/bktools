@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Disassembler
   # PDP-11 handbook: http://gordonbell.azurewebsites.net/digital/pdp%2011%20handbook%201969.pdf
   # Written with heavy inflience from https://github.com/caldwell/pdp11dasm
@@ -327,36 +329,34 @@ module Disassembler
 
   def parse_operand(code)
     r = code & 0o7
-    reg = REGISTER_NAMES[r]
 
     case (code & 0o70)
-    when 0o00 then reg
-    when 0o10 then '(' + reg + ')'
+    when 0o00 then REGISTER_NAMES[r]
+    when 0o10 then "(#{REGISTER_NAMES[r]})"
     when 0o20 then
       if r == 7 then
         @current_offset += 2
-        '#' + word_at(@current_offset).to_s(8)
-      else '(' + reg + ')+'
+        "##{word_at(@current_offset).to_s(8)}"
+      else "(#{REGISTER_NAMES[r]})+"
       end
     when 0o30 then
       if r == 7 then
         @current_offset += 2
         address = word_at(@current_offset)
-        '@#' + address_or_label(address)
-      else '@(' + reg + ')+'
+        "@##{address_or_label(address)}"
+      else "@(#{REGISTER_NAMES[r]})+"
       end
-    when 0o40 then '-(' + reg + ')'
-    when 0o50 then '@-(' + reg + ')'
+    when 0o40 then "-(#{REGISTER_NAMES[r]})"
+    when 0o50 then "@-(#{REGISTER_NAMES[r]})"
     when 0o60 then
       @current_offset += 2
 
       offset = word_at(@current_offset)
 
       if r == 7 then
-        address = Tools::rollover(@current_offset + offset + start_address + 2)
-        address_or_label(address)
+        address_or_label((start_address + @current_offset + offset + 2) & 0o177777)
       else
-        "#{offset.to_s(8)}(#{reg})"
+        "#{offset.to_s(8)}(#{REGISTER_NAMES[r]})"
       end
     when 0o70 then
       @current_offset += 2
@@ -364,10 +364,9 @@ module Disassembler
       offset = word_at(@current_offset)
 
       if r == 7 then
-        address = Tools::rollover(@current_offset + offset + start_address + 2)
-        '@' + address_or_label(address)
+        "@#{address_or_label((start_address + @current_offset + offset + 2) & 0o177777)}"
       else
-        "@#{offset.to_s(8)}(#{reg})"
+        "@#{offset.to_s(8)}(#{REGISTER_NAMES[r]})"
       end
 
     end
@@ -386,9 +385,14 @@ module Disassembler
   def get_label(address)
     return nil unless defined?(@labels)
 
+    if defined?(@references) then
+      cached_reference = @references[address]
+      return cached_reference if cached_reference
+    end
+
     if @acceptable_label_addresses.include?(address) then
       @labels[address] ||= make_new_label
-      @references[address] ||= @labels[address]
+      @references[address] = @labels[address]
     else
       closest_address = @acceptable_label_addresses.select{ |a| a <= address }.max
       @labels[closest_address] ||= make_new_label
