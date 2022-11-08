@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'assert_value'
+$assert_value_options << "--no-canonicalize"
 
 require 'disassembler'
 
@@ -12,11 +13,10 @@ class TestFile
   include Disassembler
 end
 
-
 describe TestFile do
   context "With a squential file" do
     subject do 
-      f = BkFile.new
+      f = TestFile.new
       f.start_address = 0o1000
       f.body = []
       f.length = 0o37000
@@ -28,11 +28,11 @@ describe TestFile do
     end
 
     it "should disassemble without labels" do        
-      assert_value subject.disassemble_with_labels, log: 'spec/memory.mac'
+      expect(subject.disassemble).to be_same_value_as(:log => 'spec/no-labels.asm')
     end
 
     it "should disassemble with labels" do        
-      assert_value subject.disassemble_with_labels, log: 'spec/memory_with_labels.mac'
+      expect(subject.disassemble_with_labels).to be_same_value_as(:log => 'spec/with_labels.asm')
     end
   end
 end
