@@ -172,9 +172,9 @@ class KryoFluxReader
       track = reader.convert_track
 
       if fullscan then
-        spl = track.find_sync_pulse_length
+        sync_pulse_length = track.find_sync_pulse_length
 
-        if spl then
+        if sync_pulse_length then
           reader.debug(0) { "Track processing: ".white + "success".green }
 
           track.scan

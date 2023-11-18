@@ -1,26 +1,26 @@
 GEM
   remote: http://rubygems.org/
   specs:
-    assert_value (1.5.5)
+    assert_value (1.5.6)
     diff-lcs (1.5.0)
     docile (1.4.0)
-    rake (13.0.6)
+    rake (13.1.0)
     rspec (3.12.0)
       rspec-core (~> 3.12.0)
       rspec-expectations (~> 3.12.0)
       rspec-mocks (~> 3.12.0)
-    rspec-core (3.12.0)
+    rspec-core (3.12.2)
       rspec-support (~> 3.12.0)
-    rspec-expectations (3.12.0)
+    rspec-expectations (3.12.3)
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.12.0)
-    rspec-mocks (3.12.0)
+    rspec-mocks (3.12.6)
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.12.0)
-    rspec-support (3.12.0)
+    rspec-support (3.12.1)
     rspec_junit_formatter (0.6.0)
       rspec-core (>= 2, < 4, != 2.12.0)
-    simplecov (0.21.2)
+    simplecov (0.22.0)
       docile (~> 1.1)
       simplecov-html (~> 0.11)
       simplecov_json_formatter (~> 0.1)
@@ -29,9 +29,9 @@ GEM
     sync (0.5.0)
     term-ansicolor (1.7.1)
       tins (~> 1.0)
-    tins (1.31.1)
+    tins (1.32.1)
       sync
-    wavefile (1.1.1)
+    wavefile (1.1.2)
 
 PLATFORMS
   ruby
@@ -47,4 +47,4 @@ DEPENDENCIES
   wavefile (~> 1)
 
 BUNDLED WITH
-   2.3.22
+   2.4.21
