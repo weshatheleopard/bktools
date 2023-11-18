@@ -1,4 +1,5 @@
-source "http://rubygems.org"
+source 'https://rubygems.org'
+ruby '3.1.4'
 
 gem 'wavefile', '~> 1'
 gem 'term-ansicolor'

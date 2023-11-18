@@ -1,5 +1,5 @@
 GEM
-  remote: http://rubygems.org/
+  remote: https://rubygems.org/
   specs:
     assert_value (1.5.6)
     diff-lcs (1.5.0)
@@ -45,6 +45,9 @@ DEPENDENCIES
   simplecov
   term-ansicolor
   wavefile (~> 1)
+
+RUBY VERSION
+   ruby 3.1.4p223
 
 BUNDLED WITH
    2.4.21
