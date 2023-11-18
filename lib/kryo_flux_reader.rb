@@ -19,11 +19,11 @@ class KryoFluxReader
 
   # ==================== KryoFlux File Decoding ==================== #
  
-  def _advance(fluxes)
+  def >>(fluxes)
     @stream_position += fluxes
     @file_position += (fluxes - 1)
   end
-  private :_advance
+  private :>>
 
   # Take track file from KryoFlux and convert it to array of track images (arrays of flux lengths).
   # Each item in the track image array corresponds to a single rotation of the floppy disk.
@@ -44,23 +44,23 @@ class KryoFluxReader
       when 0x00..0x07 then
         lsb = @stream[@file_position]
         add_flux((block_type << 8) + lsb, @stream_position)
-        _advance(2)
+        self >> 2
       when 0x08 then # NOP1 block, skip 1 byte
-        _advance(1)
+        self >> 1
       when 0x09 then # NOP2 block, skip 2 bytes
-        _advance(2)
+        self >> 2
       when 0x0A then # NOP3 block, skip 3 bytes
-        _advance(3)
+        self >> 3
       when 0x0B then
         raise "OVL16 block currently not supported"
       when 0x0C then # FLUX3 block
         add_flux((@stream[@file_position] << 8) + @stream[@file_position + 1], @stream_position)
-        _advance(3)
+        self >> 3
       when 0x0D then
         break if out_of_stream_block
       when 0x0E..0xFF then
         add_flux(block_type, @stream_position)
-        _advance(1)
+        self >> 1
       else
         raise "Unknown block type: %02x" % [block_type]
       end
@@ -137,7 +137,7 @@ class KryoFluxReader
         @file_position += 1
       }
 
-      puts "KryoFlux device info".magenta + "\n  * [#{str}] (#{sz})"
+      debug(1) { "KryoFlux device info".magenta + "\n  * [#{str}] (#{sz})" }
     when 0x0D then
       debug(5) { "End of file".red }
       return true
