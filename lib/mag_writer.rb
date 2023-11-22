@@ -22,10 +22,9 @@ class MagWriter
     @bk_file = bk_file
   end
 
-  def write(filename)
+  def save(filename)
     write_to_buffer
-
-    WaveFile::Writer.new(filename, WaveFile::Format.new(:mono, :pcm_8, 44100)) { |writer| writer.write(@buffer) }
+    save_buffer(filename)
   end
 
   def write_to_buffer
@@ -77,41 +76,26 @@ class MagWriter
     end
   end
 
-  def write_impulse(volume, length_pos = 0, length_neg = 0)
-    (length_pos.to_f / SOBS_TO_PULSES_COEFF).to_i.times { @buffer.samples << volume }
-    (length_neg.to_f / SOBS_TO_PULSES_COEFF).to_i.times { @buffer.samples << -volume }
+  def write_impulse(volume, positive_halfcycle_sobs = 0, negative_halfcycle_sobs = 0, mode = :sine)
+    positive_halfcycle_length = (positive_halfcycle_sobs.to_f / SOBS_TO_PULSES_COEFF).to_i
+    negative_halfcycle_length = (negative_halfcycle_sobs.to_f / SOBS_TO_PULSES_COEFF).to_i
+
+    case mode
+    when :square then
+      positive_halfcycle_length.times { @buffer.samples << volume }
+      negative_halfcycle_length.times { @buffer.samples << -volume }
+    when :sine then
+      positive_halfcycle_length.times { |i|
+        @buffer.samples << (volume * (Math::sin(Math::PI * (i + 0.5) / positive_halfcycle_length))).to_i
+      }
+      negative_halfcycle_length.times { |i|
+        @buffer.samples << -(volume * (Math::sin(Math::PI * (i + 0.5) / negative_halfcycle_length))).to_i
+      }
+    end
   end
 
-  # Give the waveform a sine shape so it doesn't sound nearly as bad. Purely cosmetic method.
-  def soften
-    softened_buffer = WaveFile::Buffer.new([ ], WaveFile::Format.new(:mono, :pcm_16, 44100))
-    i = start = volume = 0
-    state = :pos
-
-    while (volume = @buffer.samples[start + i]) do
-      case state
-      when :pos then
-        if (volume > 0) then i += 1
-        else state = :neg
-        end
-      when :neg
-        if (volume < 0) then i += 1
-        else
-          i += 1
-          sine = 2 * Math::PI / i
-
-          0.upto(i) do |n|
-            softened_buffer.samples[start + n] = (@buffer.samples[start + n].abs * Math::sin(sine * n)).to_i
-          end
-
-          state = :pos
-          start += i
-          i = 1
-        end
-      end
-    end
-
-    @buffer = softened_buffer
+  def save_buffer(filename)
+    WaveFile::Writer.new(filename, WaveFile::Format.new(:mono, :pcm_8, 44100)) { |writer| writer.write(@buffer) }
   end
 
 end

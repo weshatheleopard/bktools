@@ -49,7 +49,7 @@ f1.compare(f2)
 ## Writing data to a WAV file
 
 ```
-require 'mag_writer' ; writer = MagWriter.new(bk_file); writer.write('some_filename.wav')
+require 'mag_writer' ; writer = MagWriter.new(bk_file); writer.save('some_filename.wav')
 ```
 ## Automatic splitting
 
