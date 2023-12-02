@@ -194,7 +194,7 @@ class BkFile
           @body.inspect
         end
 
-    "#<BkFile start_address=" +
+    "#<#{self.class} start_address=" +
       (@start_address.nil? ? 'nil' : Tools::octal(@start_address)) +
       ' name: ' + @name.inspect +
       ' length: '   + (@length.nil? ? 'nil' : Tools::octal(@length)) +
