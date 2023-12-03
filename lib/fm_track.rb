@@ -124,7 +124,6 @@ class FmTrack
   end
 
   def sync_pulse_length
-#return 100
     return @force_sync_pulse_length if @force_sync_pulse_length
     @sync_pulse_length
   end
