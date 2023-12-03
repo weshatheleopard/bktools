@@ -51,10 +51,11 @@ class FmTrack
     Writer.new("#{filename}.wav", Format.new(:mono, :pcm_8, SOUND_FREQUENCY)) { |writer| writer.write(@buffer) }
   end
 
-=begin
-  def save(filename, max_len = nil, with_line_numbers = false)
-    path = Pathname.new(filename).dirname.realpath
-    fn = Pathname.new(filename).basename
+  def save(filename_prefix, max_len: nil, with_line_numbers: false)
+    scan # Detect track number
+
+    path = Pathname.new(filename_prefix).dirname.realpath
+    fn = Pathname.new(filename_prefix).basename
 
     out_fn = fn.to_s + "." + (self.track_no ? ("%02d" % self.track_no) : '_') + "." + side_code(self.side) + ".trk"
     out_path = Pathname.new(path).join(out_fn)
@@ -75,31 +76,6 @@ class FmTrack
       f.puts "=====END"
     }
   end
-
-  def analyze(start = nil, len = nil)
-    sync_pulse_length = scan # Establish sync pulse length
-
-    fluxes.each_with_index { |flux, pos|
-      next if (start && (pos < start)) || (len && (pos > start + len))
-
-      idx_no = indices.index(pos)
-      puts "-----[#{idx_no}]".yellow if idx_no
-
-      s = "%4i # %07i" % [ flux, pos ]
-
-      # Magic = 43431, where 1 = sync length
-      if flux > (sync_pulse_length * 2.25) then
-        puts s.red.bold
-      elsif flux > (sync_pulse_length * 1.9) then # Special case - synhro A1 (10100O01)
-        puts s.green.bold
-      elsif flux < (sync_pulse_length * 0.75) then
-        puts s.red.bold
-      else
-        puts s.green
-      end
-    }
-  end
-=end
 
   def self.load(filename, debuglevel = 0, cleanup: nil)
     track = self.new(debuglevel)
@@ -254,6 +230,10 @@ class FmTrack
     return false
   end
 
+  def scan
+    read_track_header(0)
+  end
+
   def read(keep_bad_data = false)
     ptr = sector_no = 0
     
@@ -330,23 +310,21 @@ class FmTrack
   def read_track_header(ptr)
     debug(15) { "--- Reading track header".yellow }
     ptr = find_track_marker(ptr)
-puts "1--",ptr.inspect
+
     return ptr if ptr == :EOF # End of track
 
     ptr, bitstream = read_fm(ptr, 4)
 
-puts "2-----#{ptr.inspect}---- ====#{ bitstream.inspect}"
- bitstream.display
 
+ bitstream.display
 
 
     return ptr if ptr == :EOF # End of track
     header_bytes = bitstream.to_bytes
     header = header_bytes.keys.sort.collect { |k| header_bytes[k] }
-puts "3--",header_bytes
+
     debug(20) { "* Raw header data: #{header.inspect}" }
 
-puts "1ptr after header=#{ptr}"
     return [ ptr, nil ] unless expect_byte(1, '00000000', header[0])
     return [ ptr, nil ] unless expect_byte(2, '11110011', header[1])
     self.track_no = header[3].to_i(2)
@@ -370,19 +348,12 @@ puts "1ptr after header=#{ptr}"
 
     bytes = nil
     data = []
-    data = sector.each.collect { |b| b.to_i(2) }
+    data = sector.each_slice(2).collect { |b1, b2| [ b2.to_i(2), b1.to_i(2)] }.flatten
 
-    checksum_hi, checksum_lo = data.pop(2)
+    checksum_lo, checksum_hi = data.pop(2)
     read_checksum = (checksum_hi << 8) | checksum_lo
 
     computed_checksum = compute_data_checksum(data)
-
-char_str = ""
-data.each_slice(2) { |b2, b1|
-  char_str << Tools::byte2char(b1)
-  char_str << Tools::byte2char(b2)
-}
-puts char_str
 
     debug(2) { "Sector data:" }
     debug(5) { "  * Read checksum:     ".blue.bold + read_checksum.to_s(2).rjust(16, '0').bold }
@@ -394,7 +365,7 @@ puts char_str
 
   def compute_data_checksum(data)
     checksum = 0
-    data.each_slice(2) { |b2, b1|
+    data.each_slice(2) { |b1, b2|
       word = (b2 << 8) | b1
       checksum = (checksum + word) & 0xFFFF
     }

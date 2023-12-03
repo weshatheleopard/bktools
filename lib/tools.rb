@@ -208,4 +208,14 @@ module Tools
     return crc & 0xFFFF
   end
 
+  def self.print_char_table
+    16.times { |x|
+      16.times { |y|
+        putc Tools::byte2char(y * 16 + x)
+        putc ' '
+      }
+      puts
+    }
+  end
+
 end
