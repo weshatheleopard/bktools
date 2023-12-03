@@ -61,11 +61,29 @@ module Tools
 
   def self.byte2char(byte)
     byte_out = case byte
-               when (0..037) then 46
+
+               when 0001 then 0x2190 # Leftwards arrow
+
+               when 0003 then 0x2912 # Upwards arrow to bar
+               when 0004 then 0x2913 # Downwards arrow to bar
+               when 0005 then 0x21b5 #enter
+               when 0006 then 0x21e4 # Leftwards Arrow To Bar
+               when 0007 then 0x21e4 # Rightwards Arrow To Bar
+
+               when 0010 then 0x21f7 # Leftwards Arrow With Vertical Stroke
+               when 0011 then 0x2192 # Rightwards Arrow
+               when 0012 then 0x2191 # Upwards Arrow
+               when 0013 then 0x2193 # Downwards Arrow
+               when 0014 then 0x2b66 # Arrow up left
+               when 0015 then 0x2b67 # Arrow up right
+               when 0016 then 0x2b68 # Arrow down right
+               when 0017 then 0x2b69 # Arrow down left
+
+               when 0044 then 0x00a4
                when (040..0176) then byte
                when 0177 then 0x25a0
 
-               when 0240 then 0x3C0
+               when 0240 then 0x03C0
                when 0241 then 0x2534
                when 0242 then 0x2665 # Heart
                when 0243 then 0x2510
