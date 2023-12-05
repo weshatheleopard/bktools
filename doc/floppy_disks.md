@@ -62,7 +62,11 @@ Most of the tracks read just fine, but for some floppies (generally in the area 
 
 Disk represents a collection of tracks. In order to load all the track images (`.trk` files) from a directory and convert them into actual binary representation of the disk's sectors:
 ```
-> disk = Disk.load("some_directory")
+> disk = Disk.load_mfm("some_directory")
+```
+The above is for BK disks (MFM). DVK disks (FM) are also supported. Note that these are dependent on the directory order since FM tracks headers do not contain side number information, and we have to rely on the filenames provided by KryoFlux:
+```
+> disk = Disk.load_fm("some_directory")
 ```
 
 Once all the sectors are loaded, the binary image of the entire disk can be saved:

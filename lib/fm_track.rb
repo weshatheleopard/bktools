@@ -39,7 +39,7 @@ class FmTrack < DiskTrack
     }
   end
 
-  def self.load(filename, debuglevel = 0, cleanup: nil)
+  def self.load(filename, debuglevel = 0, cleanup: nil, sectors: 11)
     track = self.new(debuglevel)
 
     File.readlines(filename).each { |line|
@@ -253,8 +253,6 @@ class FmTrack < DiskTrack
     return ptr if ptr == :EOF # End of track
 
     ptr, bitstream = read_fm(ptr, 4)
-
- bitstream.display
 
     return ptr if ptr == :EOF # End of track
     header_bytes = bitstream.to_bytes
