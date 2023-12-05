@@ -1,54 +1,17 @@
 # https://zx-pk.ru/threads/20541-kontroller-kngmd-dvk-(-mx-)-i-rabotayushchie-s-nim-programmy.html
 # Byte order: MSB, LSB (big-endian word)
 
-require 'wavefile'
-include WaveFile
-
+require 'disk_track'
 require 'bit_stream'
 
-class FmTrack
+class FmTrack < DiskTrack
   attr_accessor :track_no, :side
-  attr_accessor :fluxes, :indices
-  attr_accessor :force_sync_pulse_length
-  attr_accessor :debuglevel
-  attr_accessor :sectors_per_track
   attr_accessor :sectors
   attr_reader :sector_params
 
   def initialize(debuglevel = 0)
-    @debuglevel = debuglevel
     @sectors_per_track = 11
-    @fluxes = []
-    @indices = []
-    @track_no = @side = nil
-    @sync_pulse_length = nil
-    @sectors = {}
-
-    @sector_params = {}
-  end
-
-  def side_code(bit)
-    case bit
-    when 0 then "U"
-    when 1 then "D"
-    else "_"
-    end
-  end
-
-  SOUND_FREQUENCY = 22050
-  DIVISOR = 10
-
-  # Method for saving track as wav for reviewing it in a sound editor
-  def save_as_wav(filename)
-    @buffer = Buffer.new([ ], Format.new(:mono, :pcm_16, SOUND_FREQUENCY))
-    val = 30000
-    fluxes.each_with_index { |v, i|
-      round_val = (v.to_f / DIVISOR).to_i
-      round_val = 1 if round_val == 0
-      round_val.times { @buffer.samples << ((i.even?) ? 30000 : -30000 ) }
-    }
-
-    Writer.new("#{filename}.wav", Format.new(:mono, :pcm_8, SOUND_FREQUENCY)) { |writer| writer.write(@buffer) }
+    super
   end
 
   def save(filename_prefix, max_len: nil, with_line_numbers: false)
@@ -97,11 +60,6 @@ class FmTrack
 
     track.cleanup(cleanup) if cleanup
     track
-  end
-
-  def sync_pulse_length
-    return @force_sync_pulse_length if @force_sync_pulse_length
-    @sync_pulse_length
   end
 
   def bucket(flux, spl = nil)
@@ -279,22 +237,10 @@ class FmTrack
     end
   end
 
-  def successful_sectors
-    (1..self.sectors_per_track).count { |i| sectors[i] && sectors[i].valid? }
-  end
-
-  def complete?
-    successful_sectors == self.sectors_per_track
-  end
-
-  def sectors_read
-    sectors.keys.sort
-  end
-
   def display(type = nil)
     (1..@sectors_per_track).each { |sector_no|
       puts "-----Side ".yellow + side.to_s.white.bold +
-        '---Track '.yellow + ('%02d' % track_no).white.bold +
+        ((track_no && '---Track '.yellow + ('%02d' % track_no).white.bold) || '') +
         '---Sector '.yellow + ('%02d' % sector_no).white.bold +
         '------------------------------------------------'.yellow
       sector = sectors[sector_no]
@@ -315,9 +261,7 @@ class FmTrack
 
     ptr, bitstream = read_fm(ptr, 4)
 
-
  bitstream.display
-
 
     return ptr if ptr == :EOF # End of track
     header_bytes = bitstream.to_bytes

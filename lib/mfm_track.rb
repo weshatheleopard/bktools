@@ -1,14 +1,8 @@
-require 'wavefile'
-include WaveFile
-
+require 'disk_track'
 require 'bit_stream'
 
-class MfmTrack
-  attr_accessor :track_no, :side, :sectors
-  attr_accessor :fluxes, :indices
-  attr_accessor :force_sync_pulse_length
-  attr_accessor :debuglevel
-  attr_accessor :sectors_per_track
+class MfmTrack < DiskTrack
+  attr_accessor :side, :sectors
   attr_reader :sector_params
 
   def initialize(debuglevel = 0, sectors: 10)
@@ -21,30 +15,7 @@ class MfmTrack
     @sectors = {}
 
     @sector_params = {}
-  end
-
-  def side_code(bit)
-    case bit
-    when 0 then "U"
-    when 1 then "D"
-    else "_"
-    end
-  end
-
-  SOUND_FREQUENCY = 22050
-  DIVISOR = 10
-
-  # Method for saving track as wav for reviewing it in a sound editor
-  def save_as_wav(filename)
-    @buffer = Buffer.new([ ], Format.new(:mono, :pcm_16, SOUND_FREQUENCY))
-    val = 30000
-    fluxes.each_with_index { |v, i|
-      round_val = (v.to_f / DIVISOR).to_i
-      round_val = 1 if round_val == 0
-      round_val.times { @buffer.samples << ((i.even?) ? 30000 : -30000 ) }
-    }
-
-    Writer.new("#{filename}.wav", Format.new(:mono, :pcm_8, SOUND_FREQUENCY)) { |writer| writer.write(@buffer) }
+    super
   end
 
   def save(filename, max_len = nil, with_line_numbers = false)
@@ -115,11 +86,6 @@ class MfmTrack
 
     track.cleanup(cleanup) if cleanup
     track
-  end
-
-  def sync_pulse_length
-    return @force_sync_pulse_length if @force_sync_pulse_length
-    @sync_pulse_length
   end
 
   def bucket(flux, spl = nil)
