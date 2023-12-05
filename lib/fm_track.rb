@@ -13,6 +13,8 @@ class FmTrack < DiskTrack
     super(debuglevel, sectors: 11)
   end
 
+  MARKER = 0x00F3
+
   def save(filename_prefix, max_len: nil, with_line_numbers: false)
     scan # Detect track number
 
@@ -75,6 +77,8 @@ class FmTrack < DiskTrack
   def find_track_marker(ptr, max_distance = nil)
     endptr = ptr + max_distance if max_distance
 
+    marker_sequence = MARKER.to_s(2).rjust(16, '0').each_char.collect{ |c| (c == '0') ?  2 : [ 1, 1 ] }.flatten
+
     magic_counter = 0
 
     loop do
@@ -85,29 +89,9 @@ class FmTrack < DiskTrack
 
       sync_pulse_length_candidate = (marker_candidate.inject(:+)) / 32.0
 
-      if (# word "00F3"
-          (bucket(marker_candidate[0], sync_pulse_length_candidate) == 2) &&
-          (bucket(marker_candidate[1], sync_pulse_length_candidate) == 2) &&
-          (bucket(marker_candidate[2], sync_pulse_length_candidate) == 2) &&
-          (bucket(marker_candidate[3], sync_pulse_length_candidate) == 2) &&
-          (bucket(marker_candidate[4], sync_pulse_length_candidate) == 2) &&
-          (bucket(marker_candidate[5], sync_pulse_length_candidate) == 2) &&
-          (bucket(marker_candidate[6], sync_pulse_length_candidate) == 2) &&
-          (bucket(marker_candidate[7], sync_pulse_length_candidate) == 2) &&
-          (bucket(marker_candidate[8], sync_pulse_length_candidate) == 1) &&
-          (bucket(marker_candidate[9], sync_pulse_length_candidate) == 1) &&
-          (bucket(marker_candidate[10], sync_pulse_length_candidate) == 1) &&
-          (bucket(marker_candidate[11], sync_pulse_length_candidate) == 1) &&
-          (bucket(marker_candidate[12], sync_pulse_length_candidate) == 1) &&
-          (bucket(marker_candidate[13], sync_pulse_length_candidate) == 1) &&
-          (bucket(marker_candidate[14], sync_pulse_length_candidate) == 1) &&
-          (bucket(marker_candidate[15], sync_pulse_length_candidate) == 1) &&
-          (bucket(marker_candidate[16], sync_pulse_length_candidate) == 2) &&
-          (bucket(marker_candidate[17], sync_pulse_length_candidate) == 2) &&
-          (bucket(marker_candidate[18], sync_pulse_length_candidate) == 1) &&
-          (bucket(marker_candidate[19], sync_pulse_length_candidate) == 1) &&
-          (bucket(marker_candidate[20], sync_pulse_length_candidate) == 1) &&
-          (bucket(marker_candidate[21], sync_pulse_length_candidate) == 1)) then
+      if (marker_sequence.each_with_index.all? { |bit, idx|
+          bucket(marker_candidate[idx], sync_pulse_length_candidate) == bit
+        }) then
 
         debug(10) { "0x00F3 Marker found @ ".green.bold + (ptr - 1).to_s.white.bold }
         debug(30) { "  * Fluxes recognized as magic word: #{marker_candidate.inspect}" }
