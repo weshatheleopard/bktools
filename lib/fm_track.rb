@@ -10,8 +10,7 @@ class FmTrack < DiskTrack
   attr_reader :sector_params
 
   def initialize(debuglevel = 0)
-    @sectors_per_track = 11
-    super
+    super(debuglevel, sectors: 11)
   end
 
   def save(filename_prefix, max_len: nil, with_line_numbers: false)
@@ -180,12 +179,6 @@ class FmTrack < DiskTrack
     else
       return(:EOF)
     end
-  end
-
-  def expect_byte(no, expected, actual)
-    return true if (actual == expected)
-    debug(15) { "Byte #".red + no.to_s.white.bold + ": Expected ".red + expected.white.bold + ", got ".red + actual.white.bold }
-    return false
   end
 
   def scan

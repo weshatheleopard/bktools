@@ -7,15 +7,23 @@ class DiskTrack
   attr_accessor :force_sync_pulse_length
   attr_accessor :debuglevel
   attr_accessor :sectors_per_track
+  attr_accessor :track_no
 
-  def initialize(debuglevel = 0)
+  def initialize(debuglevel = 0, sectors: )
     @debuglevel = debuglevel
+    @sectors_per_track = sectors
 
     @fluxes = []
     @indices = []
     @track_no = @side = nil
     @sync_pulse_length = nil
     @sectors = {}
+  end
+
+  def expect_byte(no, expected, actual)
+    return true if (actual == expected)
+    debug(15) { "Byte #".red + no.to_s.white.bold + ": Expected ".red + expected.white.bold + ", got ".red + actual.white.bold }
+    return false
   end
 
   SOUND_FREQUENCY = 22050

@@ -7,7 +7,6 @@ class MfmTrack < DiskTrack
 
   def initialize(debuglevel = 0, sectors: 10)
     @debuglevel = debuglevel
-    @sectors_per_track = sectors
     @fluxes = []
     @indices = []
     @track_no = @side = nil
@@ -224,12 +223,6 @@ class MfmTrack < DiskTrack
     else
       return(:EOF)
     end
-  end
-
-  def expect_byte(no, expected, actual)
-    return true if (actual == expected)
-    debug(15) { "Byte #".red + no.to_s.white.bold + ": Expected ".red + expected.white.bold + ", got ".red + actual.white.bold }
-    return false
   end
 
   def read_sector_header(ptr)
