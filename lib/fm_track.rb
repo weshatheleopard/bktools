@@ -230,28 +230,35 @@ class FmTrack < DiskTrack
     puts "---------------------------------------------------------------------------------".yellow
   end
 
+  # Track header:
+  #   * 000363
+  #   * Track number (16 bit)
+  #   {
+  #     * 128 x data word (16 bit)
+  #     * Checksum (16 bit, simple sum of data words)
+  #   } x 11
   def read_track_header(ptr)
     debug(15) { "--- Reading track header".yellow }
-    ptr = find_track_marker(ptr)
+    ptr_after_marker = find_track_marker(ptr)
 
     return ptr if ptr == :EOF # End of track
 
-    ptr, bitstream = read_fm(ptr, 4)
+    ptr_after_header, bitstream = read_fm(ptr_after_marker, 4)
 
-    return ptr if ptr == :EOF # End of track
+    return ptr_after_header if ptr_after_header == :EOF # End of track
     header_bytes = bitstream.to_bytes
     header = header_bytes.keys.sort.collect { |k| header_bytes[k] }
 
     debug(20) { "* Raw header data: #{header.inspect}" }
 
-    return [ ptr, nil ] unless expect_byte(1, '00000000', header[0])
-    return [ ptr, nil ] unless expect_byte(2, '11110011', header[1])
+    return [ ptr_after_header, nil ] unless expect_byte(1, '00000000', header[0])
+    return [ ptr_after_header, nil ] unless expect_byte(2, '11110011', header[1])
     self.track_no = header[3].to_i(2)
 	
     debug(2) { "Track header:" }
     debug(3) { "  * Track:             ".blue.bold + self.track_no.to_s.bold }
 
-    return ptr
+    return ptr_after_header
   end
 
   def read_sector_data(ptr, sector_size)
