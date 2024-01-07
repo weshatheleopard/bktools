@@ -301,8 +301,9 @@ attr_accessor :debug_bytes
       read_body
     end
 
-    debug(0) { "Verifying file checksum: #{@bk_file.validate_checksum ? 'success'.green : 'failed'.red }" }
-    debug(1) { "Read complete." }
+    debug(1) { "Verifying file checksum: #{@bk_file.validate_checksum ? 'success'.green : 'failed'.red }" }
+    debug(2) { "Read complete." }
+    @bk_file.validate_checksum
   end
 
   def read_body

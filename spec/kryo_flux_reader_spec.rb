@@ -3,7 +3,7 @@ require 'kryo_flux_reader'
 RSpec.describe KryoFluxReader do
   context KryoFluxReader do
     let :reader do
-      KryoFluxReader.new "spec/track.79.0.raw", 0
+      KryoFluxReader.new "spec/source_data/track.79.0.raw", 0
     end
 
     let :track do
