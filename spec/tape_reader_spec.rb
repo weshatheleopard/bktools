@@ -1,4 +1,4 @@
-require 'mag_reader'
+require 'tape_reader'
 
 RSpec.describe TapeReader do
   context "Reader with standard tape" do
