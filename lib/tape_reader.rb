@@ -6,7 +6,7 @@ require 'help7'
 require 'term/ansicolor'
 include Term::ANSIColor
 
-class MagReader
+class TapeReader
   include WaveformFixer
   include TapeSplitter
   include Help7

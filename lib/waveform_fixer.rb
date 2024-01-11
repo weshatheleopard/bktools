@@ -4,7 +4,7 @@ module WaveformFixer
   MIN_CORRECTION = 1000
   MONO16BIT = WaveFile::Format.new(:mono, :pcm_16, 44100)
 
-  # This modiule contains experimental code for MagReader that is intended to repair files
+  # This modiule contains experimental code for TapeReader that is intended to repair files
   #   that were imperfectly read from the tape (with offset reading head, etc.)
   # You should understand what you're doing to use this!
 

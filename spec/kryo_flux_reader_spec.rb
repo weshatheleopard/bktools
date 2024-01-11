@@ -11,7 +11,7 @@ RSpec.describe KryoFluxReader do
     end
 
     it "should convert RAW file to TRK file" do        
-      expect(track.fluxes.to_s).to be_same_value_as(:log => 'spec/track.79.0.fluxes')
+      expect(track.fluxes.to_s).to be_same_value_as(:log => 'spec/result_data/track.79.0.fluxes')
     end
 
     it "scan() should detect sync puse length and read track number from the header" do        

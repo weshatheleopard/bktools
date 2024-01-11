@@ -28,11 +28,11 @@ describe TestFile do
     end
 
     it "should disassemble without labels" do        
-      expect(subject.disassemble).to be_same_value_as(:log => 'spec/no-labels.asm')
+      expect(subject.disassemble).to be_same_value_as(:log => 'spec/result_data/no-labels.asm')
     end
 
     it "should disassemble with labels" do        
-      expect(subject.disassemble_with_labels).to be_same_value_as(:log => 'spec/with_labels.asm')
+      expect(subject.disassemble_with_labels).to be_same_value_as(:log => 'spec/result_data/with_labels.asm')
     end
   end
 end

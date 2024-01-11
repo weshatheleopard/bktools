@@ -43,7 +43,7 @@ module TapeSplitter
       @pilot_counter += 1
     else
       # Discrepancy too large. Let's see if it's an accident or an actual start marker.
-      if (@pilot_counter > MagReader::PILOT_LENGTH) && (len > (3 * @prev_len)) then  # So it is an actual start marker.
+      if (@pilot_counter > TapeReader::PILOT_LENGTH) && (len > (3 * @prev_len)) then  # So it is an actual start marker.
         debug(8) { "Pilot sequence detected at ##{@start_pos_candidate.to_s.bold}-#{@current_sample_pos.to_s.bold}" }
 
         @split_locations << @start_pos_candidate

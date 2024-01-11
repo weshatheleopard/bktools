@@ -89,14 +89,14 @@ module Help7
     @const35 = (@total_speedtest_length * 3.5)
     @const50 = @const25 + @const35
 
-    @cutoff  = (@cutoff  / MagReader::SPEEDTEST_LENGTH).floor
-    @cutoff1 = (@cutoff1 / MagReader::SPEEDTEST_LENGTH * 1.35).floor
-    @const25 = (@const25 / MagReader::SPEEDTEST_LENGTH * 1.35).floor
-    @const35 = (@const35 / MagReader::SPEEDTEST_LENGTH * 1.35).floor
-    @const50 = (@const50 / MagReader::SPEEDTEST_LENGTH * 1.2).floor  # was 1.35
+    @cutoff  = (@cutoff  / TapeReader::SPEEDTEST_LENGTH).floor
+    @cutoff1 = (@cutoff1 / TapeReader::SPEEDTEST_LENGTH * 1.35).floor
+    @const25 = (@const25 / TapeReader::SPEEDTEST_LENGTH * 1.35).floor
+    @const35 = (@const35 / TapeReader::SPEEDTEST_LENGTH * 1.35).floor
+    @const50 = (@const50 / TapeReader::SPEEDTEST_LENGTH * 1.2).floor  # was 1.35
 
     # Compensation for high-speed mode
-    if @total_speedtest_length < (MagReader::SPEEDTEST_LENGTH * 7) then
+    if @total_speedtest_length < (TapeReader::SPEEDTEST_LENGTH * 7) then
       @cutoff1 += 4
       @const25 += 4
       @const35 += 4
