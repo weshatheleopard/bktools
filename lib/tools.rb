@@ -218,4 +218,17 @@ module Tools
     }
   end
 
+  def self.rom2bin(filename)
+    input_data = File.open(filename, "rb") { |f| f.read }
+    puts "Wrong ROM data size)".red && return if input_data.size != 8194
+
+    address_ranges = [ '160000-177777', '140000-157777', '120000-137777', '100000-117777',
+                       '060000-077777', '040000-057777', '020000-037777', '000000-017777']
+    range = address_ranges[input_data[-2].ord]
+    puts 'ROM address range: '.green + range.yellow
+
+    output_data = input_data[0..-3].each_byte.collect { |b| (255 - b.ord).chr }
+    File.open(filename + ".(#{range}).bin", "wb") { |f| f << output_data.join }
+  end
+
 end

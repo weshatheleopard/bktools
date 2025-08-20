@@ -1,5 +1,5 @@
 source 'https://rubygems.org'
-ruby '3.1.4'
+ruby '3.4.1'
 
 gem 'wavefile', '~> 1'
 gem 'term-ansicolor'
