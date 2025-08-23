@@ -227,7 +227,10 @@ module Tools
     range = address_ranges[input_data[-2].ord]
     puts 'ROM address range: '.green + range.yellow
 
-    output_data = input_data[0..-3].each_byte.collect { |b| (255 - b.ord).chr }
+    output_data = input_data[0..-3].each_byte.reverse_each.
+                    each_slice(2).collect { |s| s.reverse }.flatten.
+                    collect { |b| (255 - b.ord).chr }
+
     File.open(filename + ".(#{range}).bin", "wb") { |f| f << output_data.join }
   end
 
