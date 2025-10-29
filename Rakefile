@@ -10,6 +10,10 @@ rescue Bundler::BundlerError => e
   exit e.status_code
 end
 
+require 'rspec/core/rake_task'
+RSpec::Core::RakeTask.new(:rspec)
+task :default => :rspec
+
 desc 'Start IRB with all runtime dependencies loaded'
 task :console, [:script] do |_t, args|
   # TODO: move to a command

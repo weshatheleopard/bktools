@@ -7,6 +7,7 @@ gem 'term-ansicolor'
 # Development dependencies.
 group :development, :test do
   gem "rake"
+  gem 'ostruct'
   gem "bundler"
   gem "simplecov"
   gem "rspec"
