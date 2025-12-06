@@ -3,11 +3,23 @@ GEM
   specs:
     assert_value (1.5.6)
     bigdecimal (3.3.1)
+    date (3.4.1)
     diff-lcs (1.6.2)
     docile (1.4.1)
+    io-console (0.8.0)
+    irb (1.14.3)
+      rdoc (>= 4.0.0)
+      reline (>= 0.4.2)
     mize (0.6.1)
     ostruct (0.6.3)
+    psych (5.2.2)
+      date
+      stringio
     rake (13.3.1)
+    rdoc (6.10.0)
+      psych (>= 4.0.0)
+    reline (0.6.0)
+      io-console (~> 0.5)
     rspec (3.13.2)
       rspec-core (~> 3.13.0)
       rspec-expectations (~> 3.13.0)
@@ -29,6 +41,7 @@ GEM
       simplecov_json_formatter (~> 0.1)
     simplecov-html (0.13.2)
     simplecov_json_formatter (0.1.4)
+    stringio (3.1.2)
     sync (0.5.0)
     term-ansicolor (1.11.3)
       tins (~> 1)
@@ -44,8 +57,10 @@ PLATFORMS
 DEPENDENCIES
   assert_value
   bundler
+  irb
   ostruct
   rake
+  rdoc
   rspec
   rspec_junit_formatter
   simplecov
@@ -56,4 +71,4 @@ RUBY VERSION
    ruby 3.4.1p0
 
 BUNDLED WITH
-   2.4.21
+   2.7.2

@@ -6,11 +6,13 @@ gem 'term-ansicolor'
 
 # Development dependencies.
 group :development, :test do
-  gem "rake"
+  gem 'rake'
   gem 'ostruct'
-  gem "bundler"
-  gem "simplecov"
-  gem "rspec"
+  gem 'bundler'
+  gem 'simplecov'
+  gem 'rspec'
   gem 'rspec_junit_formatter'
   gem 'assert_value'
+  gem 'rdoc'
+  gem 'irb'
 end
