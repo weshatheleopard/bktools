@@ -323,19 +323,19 @@ module Disassembler
   end
 
   def __SSDD(cmd, word)
-    cmd + "\t" + parse_operand((word >> 6) & 0o77) + ',' + parse_operand(word & 0o77)
+    [ cmd, parse_operand((word >> 6) & 0o77), parse_operand(word & 0o77) ]
   end
 
   def ____DD(cmd, word)
-    cmd + "\t" + parse_operand(word & 0o77)
+    [ cmd, parse_operand(word & 0o77) ]
   end
 
   def ___RDD(cmd, word)
-    cmd + "\t" + parse_operand((word >> 6) & 0o7) + ',' + parse_operand(word & 0o77)
+    [ cmd, parse_operand((word >> 6) & 0o7), parse_operand(word & 0o77) ]
   end
 
   def ___XXX(cmd, word)
-    cmd + "\t" + address_or_label(offset2address(word & 0o377))
+    [ cmd, address_or_label(offset2address(word & 0o377)) ]
   end
 
   def parse_operand(code)
@@ -393,13 +393,15 @@ module Disassembler
     "L#{@label_no += 1}"
   end
 
-  def get_label(address)
+  def get_label(address, make_new_if_missing = true)
     return nil unless defined?(@labels)
 
     if defined?(@references) then
       cached_reference = @references[address]
       return cached_reference if cached_reference
     end
+
+    return unless make_new_if_missing
 
     if @acceptable_label_addresses.include?(address) then
       @labels[address] ||= make_new_label
@@ -412,6 +414,11 @@ module Disassembler
   end
 
   def address_or_label(address)
+    if @predefined_labels
+      label = get_label(address, false)
+      return label if label
+    end
+
     if (address >= start_address) && (address <= (start_address + length)) then
       label = get_label(address)
       return label if label
