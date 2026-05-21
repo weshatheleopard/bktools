@@ -48,16 +48,16 @@ module Disassembler
     while @current_offset < body.length do
       start_offset = @current_offset
       @acceptable_label_addresses << (start_address + @current_offset) if pass == 1
-      current_command, step, label, add_newline_after = decode_command
+      mnemonic, instruction_size, label, add_newline_after = decode_command
 
       next unless str # Do not bother building the output unless all labels are determined
 
-      oct = Tools::octal(word_at(start_offset)) << ' '
-      oct << ((step > 2) ? Tools::octal(word_at(start_offset + 2)) : '      ') << ' '
-      oct << ((step > 4) ? Tools::octal(word_at(start_offset + 4)) : '      ')
+      code = (0..4).step(2).collect { |offset|
+        (offset < instruction_size ? Tools::octal(word_at(start_offset + offset)) : '      ')
+      }.join(' ')
 
       label += ':' unless label.nil? || (label == '')
-      str << "#{Tools::octal(start_address + start_offset)}: #{oct}\t#{label}\t#{current_command}\n"
+      str << "#{Tools::octal(start_address + start_offset)}: #{code}\t#{label}\t#{mnemonic}\n"
       str << "\n" if add_newline_after
     end
 
