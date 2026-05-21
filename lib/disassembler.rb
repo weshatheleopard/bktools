@@ -6,8 +6,10 @@ module Disassembler
 
   REGISTER_NAMES = %w[ R0 R1 R2 R3 R4 R5 SP PC ]
 
+  # Prefefined lavels contain a hash of names assigned to specific addresses.
+  # For example: { 0o001000 => :START, 0o177714 => :IOPORT }
   def disassemble_with_labels(predefined_labels = {})
-    # TODO: populate @labels and @references from predefined_labels
+    @predefined_labels = predefined_labels
     disassemble(1)
     disassemble(2)
     disassemble(3)
@@ -22,6 +24,10 @@ module Disassembler
     when 2 then # 2nd pass to determine labels
       @labels = {}      # Label corresponding to a particular address
       @references = {}  # Text indicating how to refer to a particular address
+      @predefined_labels.each_pair { |address, label|
+        @labels[address] = label.to_s
+        @references[address] = label.to_s
+      }
     when 3, nil
       str = +''
     end
