@@ -99,7 +99,7 @@ module Disassembler
         when 0o000200 then
           case (current_word)
           when (0o000200..0o000206) then
-            cmd = [ "RTS", parse_operand(current_word & 0o7) ]
+            cmd = [ 'RTS', parse_operand(current_word & 0o7) ]
             newline_after = true
           when 0o000207 then
             cmd = 'RET'
@@ -181,7 +181,7 @@ module Disassembler
         when 0o006300 then
           cmd = ____DD('ASL', current_word)
         when 0o006400 then
-          cmd = [ "MARK", (current_word & 0o77).to_s(8) ]
+          cmd = [ 'MARK', (current_word & 0o77).to_s(8) ]
         when 0o006500 then
           cmd = ____DD('MFPI', current_word)
         when 0o006600 then
@@ -210,7 +210,7 @@ module Disassembler
         cmd = ___RDD('XOR', current_word)
       when 0o077000 then
         address = (start_address + @current_offset + 2 - ((current_word & 0o77) * 2))
-        cmd = [ "SOB", parse_operand((current_word >> 6) & 0o7), address_or_label(address) ]
+        cmd = [ 'SOB', parse_operand((current_word >> 6) & 0o7), address_or_label(address) ]
         newline_after = true
       end
     when 0o100000 then
@@ -255,9 +255,9 @@ module Disassembler
         oper = (current_word & 0o377).to_s(8)
         case (current_word & 0o104400)
         when 0o104000 then
-          cmd = [ "EMT", oper ]
+          cmd = [ 'EMT', oper ]
         when 0o104400 then
-          cmd = [ "TRAP", oper ]
+          cmd = [ 'TRAP', oper ]
         end
       when 0o105000 then
         case (current_word & 0o177700)
@@ -313,7 +313,7 @@ module Disassembler
       # If by now we haven't found a valid command, it must be a constant.
       cmd = '.#' + current_word.to_s(8)
     when Array then
-      cmd = "#{cmd.shift}\t#{cmd.join(",")}"
+      cmd = "#{cmd.shift}\t#{cmd.join(',')}"
     end
 
     label = defined?(@labels) && @labels[start_address + command_start_offset]
