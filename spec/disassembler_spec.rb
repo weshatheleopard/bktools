@@ -32,7 +32,8 @@ describe TestFile do
     end
 
     it "should disassemble with labels" do        
-      expect(subject.disassemble_with_labels).to be_same_value_as(:log => 'spec/result_data/with_labels.asm')
+      predefined_labels = { 0o1146 => :TEST1, 0o1150 => :TEST2, 0o1152 => :TEST3 }
+      expect(subject.disassemble_with_labels(predefined_labels)).to be_same_value_as(:log => 'spec/result_data/with_labels.asm')
     end
   end
 end

@@ -42,9 +42,9 @@ module Disassembler
     while @current_offset < body.length do
       start_offset = @current_offset
       @acceptable_label_addresses << (start_address + @current_offset) if pass == 1
-      current_command, step, label = decode_command
+      current_command, step, label, add_newline_after = decode_command
 
-      next unless str
+      next unless str # Do not bother building the output unless all labels are determined
 
       oct = Tools::octal(word_at(start_offset)) << ' '
       oct << ((step > 2) ? Tools::octal(word_at(start_offset + 2)) : '      ') << ' '
@@ -52,7 +52,7 @@ module Disassembler
 
       label += ':' unless label.nil? || (label == '')
       str << "#{Tools::octal(start_address + start_offset)}: #{oct}\t#{label}\t#{current_command}\n"
-      str << "\n" if current_command =~ /^(JMP|RTS|RET|BR|SOB)/
+      str << "\n" if add_newline_after
     end
 
     str
@@ -70,7 +70,7 @@ module Disassembler
     command_start_offset = @current_offset
     current_word = Tools::bytes2word(body[@current_offset], body[@current_offset + 1])
 
-    cmd = nil
+    newline_after = cmd = nil
 
     case (current_word & 0o170000)
     when 0o000000 then
@@ -89,12 +89,15 @@ module Disassembler
           end
         when 0o000100 then
           cmd = ____DD('JMP', current_word)
+          newline_after = true
         when 0o000200 then
           case (current_word)
           when (0o000200..0o000206) then
             cmd = [ "RTS", parse_operand(current_word & 0o7) ]
+            newline_after = true
           when 0o000207 then
             cmd = 'RET'
+            newline_after = true
           when 0o000240 then cmd = 'NOP'
           when 0o000241 then cmd = 'CLC'
           when 0o000242 then cmd = 'CLV'
@@ -111,6 +114,7 @@ module Disassembler
           cmd = ____DD('SWAB', current_word)
         when 0o000400, 0o000500, 0o000600, 0o000700 then
           cmd = ___XXX('BR', current_word)
+          newline_after = true
         end
       when 0o001000 then
         case (current_word & 0o177400)
@@ -201,6 +205,7 @@ module Disassembler
       when 0o077000 then
         address = (start_address + @current_offset + 2 - ((current_word & 0o77) * 2))
         cmd = [ "SOB", parse_operand((current_word >> 6) & 0o7), address_or_label(address) ]
+        newline_after = true
       end
     when 0o100000 then
       case (current_word & 0o177000)
@@ -308,7 +313,7 @@ module Disassembler
     label = defined?(@labels) && @labels[start_address + command_start_offset]
     @current_offset += 2
     @previous_command = cmd
-    [ cmd, @current_offset - command_start_offset, label ]
+    [ cmd, @current_offset - command_start_offset, label, newline_after ]
   end
 
   def __SSDD(cmd, word)

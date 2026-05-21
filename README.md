@@ -85,3 +85,9 @@ bk_file.disassemble
 bk_file.disassemble_with_labels
 
 ```
+Can also specify some labels that you want to have:
+
+```
+bk_file.disassemble_with_labels({ 0o001000 => :START, 0o177714 => :IOPORT })
+
+```
