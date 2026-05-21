@@ -30,6 +30,12 @@ module Disassembler
       }
     when 3, nil
       str = +''
+      if @predefined_labels then
+        @predefined_labels.each_pair { |address, label|
+          str << "#{label}=#{Tools::octal(address)}\n"
+        }
+        str << "\n"
+      end
     end
 
     # TODO: currently start address must be even
