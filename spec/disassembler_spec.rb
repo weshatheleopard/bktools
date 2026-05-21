@@ -19,7 +19,7 @@ describe TestFile do
       f = TestFile.new
       f.start_address = 0o1000
       f.body = []
-      f.length = 0o37000
+      f.length = 0o177776
       (f.length / 2).times do |i|
         bytes = Tools::word_to_byte_array(i*8)
         f.body << bytes[0] << bytes[1]
