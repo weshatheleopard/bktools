@@ -200,9 +200,6 @@ module Help7
     current_block.length.times { |i|
       byte = 0
       debug(30) {
-        @max_cols = ENV['COLUMNS'].to_i
-        @max_cols = 80 if @max_cols < 80
-
         '                ' + '-' * (@cutoff1.to_i - 1) + '>' + '-' * (@const25 - @cutoff1 - 1).to_i + '>' + '-' * (@const35 - @const25 - 1).to_i + '>' + '-----------------'
       }
 
