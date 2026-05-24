@@ -120,7 +120,7 @@ module Help7
 
     bytes_remaining = @bk_file.length
     @num_of_blocks = ((@bk_file.length - 1).divmod(block_length).first + 1)
-    read_blocks = Array.new(@num_of_blocks)
+    blocks_read_status = Array.new(@num_of_blocks)
 
     loop {
       find_block_marker
@@ -130,15 +130,15 @@ module Help7
       if block = read_help7_block(current_block) then
         block_address = (block.number - 1) * block_length
 
-        if read_blocks[block.number - 1] != true then
+        if blocks_read_status[block.number - 1] != true then
           block.length.times { |i|
             @bk_file.body[block_address + i] = block.body[i]
           }
 
           bytes_remaining -= block.length
-          read_blocks[block.number - 1] = true
+          blocks_read_status[block.number - 1] = true
 
-          debug(6) { "Blocks remaining to read: " + read_blocks.collect { |f| f ? '+'.green : '-'.red }.join }
+          debug(6) { "Blocks remaining to read: " + blocks_read_status.collect { |f| f ? '+'.green : '-'.red }.join }
           debug(7) { "Bytes remaining to read:  " + bytes_remaining.to_s.bold }
         else
           debug(7) { "Block already read. Bytes remaining to read: " + bytes_remaining.to_s.bold }
