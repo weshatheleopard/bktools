@@ -2,8 +2,13 @@ module BkImage
 
   attr_accessor :image_header_length
 
-  def save_as_bmp(width = 256)
-    height = body.size / (width / 4)
+  BK_COLORS = [ 0x00000000,  # BLACK
+                0x000000FF,  # BLUE
+                0x0000FF00,  # GREEN
+                0x00FF0000 ] # RED
+
+  def save_as_bmp(width = 256, data = body)
+    height = data.size / (width / 4)
     # BMP code with heavy influence from @Papierkorb - https://gist.github.com/Papierkorb/019ef4b330923175db4a7e6e54f4fb41
     File.open("#{safe_name}-#{width}.bmp", "wb") { |f|
       header_size = 54
@@ -32,18 +37,12 @@ module BkImage
       height.times do |y|
         str = []
         64.times do |x|
-          byte = @body[64 * y + x + (@image_header_length || 0)]
+          byte = data[64 * y + x + (@image_header_length || 0)]
 
           break if byte.nil? # Bail out if we ran out of data
 
           4.times do
-            case byte & 3
-            when 1 then str << 0x000000FF # BLUE
-            when 2 then str << 0x0000FF00 # GREEN
-            when 3 then str << 0x00FF000F # RED
-            when 0 then str << 0x00000000
-            end
-
+            str << BK_COLORS[byte & 3]
             byte = byte >> 2
           end
 
