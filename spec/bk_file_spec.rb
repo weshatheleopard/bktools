@@ -8,9 +8,7 @@ RSpec.describe BkFile do
       f = BkFile.new
       f.start_address = 0o1000
       f.length = 0o37000
-      f.length.times do |i|
-        f.body << 0
-      end
+      f.body = Array.new(f.length, 0)
       f
     end
 

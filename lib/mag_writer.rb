@@ -4,6 +4,8 @@ include Term::ANSIColor
 
 class MagWriter
   attr_accessor :bk_file
+  attr_accessor :mode
+  attr_reader :buffer
 
   ZERO_LEVEL = 15000
   ONE_LEVEL = 30000
@@ -18,8 +20,9 @@ class MagWriter
 
   SOBS_TO_PULSES_COEFF = 3.3
 
-  def initialize(bk_file)
+  def initialize(bk_file, **params)
     @bk_file = bk_file
+    @mode = params[:mode] || :sine
   end
 
   def save(filename)
@@ -76,12 +79,14 @@ class MagWriter
     end
   end
 
-  def write_impulse(volume, positive_halfcycle_sobs = 0, negative_halfcycle_sobs = 0, mode = :sine)
+  def write_impulse(volume, positive_halfcycle_sobs = 0, negative_halfcycle_sobs = 0)
     positive_halfcycle_length = (positive_halfcycle_sobs.to_f / SOBS_TO_PULSES_COEFF).to_i
     negative_halfcycle_length = (negative_halfcycle_sobs.to_f / SOBS_TO_PULSES_COEFF).to_i
 
     case mode
     when :square then
+      # @buffer.samples.concat(Array.new(positive_halfcycle_length, volume))
+      # @buffer.samples.concat(Array.new(negative_halfcycle_length, -volume))
       positive_halfcycle_length.times { @buffer.samples << volume }
       negative_halfcycle_length.times { @buffer.samples << -volume }
     when :sine then
