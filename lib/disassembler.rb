@@ -2,11 +2,11 @@
 
 module Disassembler
   # PDP-11 handbook: http://gordonbell.azurewebsites.net/digital/pdp%2011%20handbook%201969.pdf
-  # Written with heavy inflience from https://github.com/caldwell/pdp11dasm
+  # Written with heavy influence from https://github.com/caldwell/pdp11dasm
 
   REGISTER_NAMES = %w[ R0 R1 R2 R3 R4 R5 SP PC ]
 
-  # Prefefined lavels contain a hash of names assigned to specific addresses.
+  # Predefined lavels contain a hash of names assigned to specific addresses.
   # For example: { 0o001000 => :START, 0o177714 => :IOPORT }
   def disassemble_with_labels(predefined_labels = {})
     @predefined_labels = predefined_labels
