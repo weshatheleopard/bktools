@@ -62,134 +62,134 @@ module Tools
   def self.byte2char(byte)
     byte_out = case byte
 
-               when 0001 then 0x2190 # Leftwards arrow
+               when 0o001 then 0x2190 # Leftwards arrow
 
-               when 0003 then 0x2912 # Upwards arrow to bar
-               when 0004 then 0x2913 # Downwards arrow to bar
-               when 0005 then 0x21b5 #enter
-               when 0006 then 0x21e4 # Leftwards Arrow To Bar
-               when 0007 then 0x21e4 # Rightwards Arrow To Bar
+               when 0o003 then 0x2912 # Upwards arrow to bar
+               when 0o004 then 0x2913 # Downwards arrow to bar
+               when 0o005 then 0x21b5 #enter
+               when 0o006 then 0x21e4 # Leftwards Arrow To Bar
+               when 0o007 then 0x21e4 # Rightwards Arrow To Bar
 
-               when 0010 then 0x21f7 # Leftwards Arrow With Vertical Stroke
-               when 0011 then 0x2192 # Rightwards Arrow
-               when 0012 then 0x2191 # Upwards Arrow
-               when 0013 then 0x2193 # Downwards Arrow
-               when 0014 then 0x2b66 # Arrow up left
-               when 0015 then 0x2b67 # Arrow up right
-               when 0016 then 0x2b68 # Arrow down right
-               when 0017 then 0x2b69 # Arrow down left
+               when 0o010 then 0x21f7 # Leftwards Arrow With Vertical Stroke
+               when 0o011 then 0x2192 # Rightwards Arrow
+               when 0o012 then 0x2191 # Upwards Arrow
+               when 0o013 then 0x2193 # Downwards Arrow
+               when 0o014 then 0x2b66 # Arrow up left
+               when 0o015 then 0x2b67 # Arrow up right
+               when 0o016 then 0x2b68 # Arrow down right
+               when 0o017 then 0x2b69 # Arrow down left
 
-               when 0044 then 0x00a4
-               when (040..0176) then byte
-               when 0177 then 0x25a0
+               when 0o044 then 0x00a4
+               when (0o40..0o176) then byte
+               when 0o177 then 0x25a0
 
-               when 0240 then 0x03C0
-               when 0241 then 0x2534
-               when 0242 then 0x2665 # Heart
-               when 0243 then 0x2510
-               when 0244 then 0x2561
-               when 0245 then 0x251c
-               when 0246 then 0x2514
-               when 0247 then 0x2550
-               when 0250 then 0x2564
+               when 0o240 then 0x03C0
+               when 0o241 then 0x2534
+               when 0o242 then 0x2665 # Heart
+               when 0o243 then 0x2510
+               when 0o244 then 0x2561
+               when 0o245 then 0x251c
+               when 0o246 then 0x2514
+               when 0o247 then 0x2550
+               when 0o250 then 0x2564
 
-               when 0251 then 0x2660
-               when 0252 then 0x250c
-               when 0253 then 0x252c
-               when 0254 then 0x2568
-               when 0255 then 0x2193 # Arrow down
-               when 0256 then 0x253c # Single crossed lines
-               when 0257 then 0x2551 # Dual vertical line
+               when 0o251 then 0x2660
+               when 0o252 then 0x250c
+               when 0o253 then 0x252c
+               when 0o254 then 0x2568
+               when 0o255 then 0x2193 # Arrow down
+               when 0o256 then 0x253c # Single crossed lines
+               when 0o257 then 0x2551 # Dual vertical line
 
-               when 0260 then 0x2524
-               when 0261 then 0x2190 # Arrow left
-               when 0262 then 0x256c # Double crossed lines
-               when 0263 then 0x2191 # Arrow up
-               when 0264 then 0x2663 # Spades
-               when 0265 then 0x2500 # Single horizontal line
-               when 0266 then 0x256b
-               when 0267 then 0x2502 # Single vertical line
+               when 0o260 then 0x2524
+               when 0o261 then 0x2190 # Arrow left
+               when 0o262 then 0x256c # Double crossed lines
+               when 0o263 then 0x2191 # Arrow up
+               when 0o264 then 0x2663 # Spades
+               when 0o265 then 0x2500 # Single horizontal line
+               when 0o266 then 0x256b
+               when 0o267 then 0x2502 # Single vertical line
 
-               when 0270 then 0x2666 # Clubs
-               when 0271 then 0x2518
-               when 0272 then 0x256a
-               when 0273 then 0x2565
-               when 0274 then 0x2567
-               when 0275 then 0x255e
-               when 0276 then 0x2192 # Arrow right
-               when 0277 then 0x2592
+               when 0o270 then 0x2666 # Clubs
+               when 0o271 then 0x2518
+               when 0o272 then 0x256a
+               when 0o273 then 0x2565
+               when 0o274 then 0x2567
+               when 0o275 then 0x255e
+               when 0o276 then 0x2192 # Arrow right
+               when 0o277 then 0x2592
 
-               when 0300 then 0x044e
-               when 0301 then 0x0430
-               when 0302 then 0x0431
-               when 0303 then 0x0446
-               when 0304 then 0x0434
-               when 0305 then 0x0435
-               when 0306 then 0x0444
-               when 0307 then 0x0433
+               when 0o300 then 0x044e
+               when 0o301 then 0x0430
+               when 0o302 then 0x0431
+               when 0o303 then 0x0446
+               when 0o304 then 0x0434
+               when 0o305 then 0x0435
+               when 0o306 then 0x0444
+               when 0o307 then 0x0433
 
-               when 0310 then 0x0445
-               when 0311 then 0x0438
-               when 0312 then 0x0439
-               when 0313 then 0x043a
-               when 0314 then 0x043b
-               when 0315 then 0x043c
-               when 0316 then 0x043d
-               when 0317 then 0x043e
+               when 0o310 then 0x0445
+               when 0o311 then 0x0438
+               when 0o312 then 0x0439
+               when 0o313 then 0x043a
+               when 0o314 then 0x043b
+               when 0o315 then 0x043c
+               when 0o316 then 0x043d
+               when 0o317 then 0x043e
 
-               when 0320 then 0x043f
-               when 0321 then 0x044f
-               when 0322 then 0x0440
-               when 0323 then 0x0441
-               when 0324 then 0x0442
-               when 0325 then 0x0443
-               when 0326 then 0x0436
-               when 0327 then 0x0432
+               when 0o320 then 0x043f
+               when 0o321 then 0x044f
+               when 0o322 then 0x0440
+               when 0o323 then 0x0441
+               when 0o324 then 0x0442
+               when 0o325 then 0x0443
+               when 0o326 then 0x0436
+               when 0o327 then 0x0432
 
-               when 0330 then 0x044c
-               when 0331 then 0x044b
-               when 0332 then 0x0437
-               when 0333 then 0x0448
-               when 0334 then 0x044d
-               when 0335 then 0x0449
-               when 0336 then 0x0447
-               when 0337 then 0x044a
+               when 0o330 then 0x044c
+               when 0o331 then 0x044b
+               when 0o332 then 0x0437
+               when 0o333 then 0x0448
+               when 0o334 then 0x044d
+               when 0o335 then 0x0449
+               when 0o336 then 0x0447
+               when 0o337 then 0x044a
 
-               when 0340 then 0x042e
-               when 0341 then 0x0410
-               when 0342 then 0x0411
-               when 0343 then 0x0426
-               when 0344 then 0x0414
-               when 0345 then 0x0415
-               when 0346 then 0x0424
-               when 0347 then 0x0413
+               when 0o340 then 0x042e
+               when 0o341 then 0x0410
+               when 0o342 then 0x0411
+               when 0o343 then 0x0426
+               when 0o344 then 0x0414
+               when 0o345 then 0x0415
+               when 0o346 then 0x0424
+               when 0o347 then 0x0413
 
-               when 0350 then 0x0425
-               when 0351 then 0x0418
-               when 0352 then 0x0419
-               when 0353 then 0x041a
-               when 0354 then 0x041b
-               when 0355 then 0x041c
-               when 0356 then 0x041d
-               when 0357 then 0x041e
+               when 0o350 then 0x0425
+               when 0o351 then 0x0418
+               when 0o352 then 0x0419
+               when 0o353 then 0x041a
+               when 0o354 then 0x041b
+               when 0o355 then 0x041c
+               when 0o356 then 0x041d
+               when 0o357 then 0x041e
 
-               when 0360 then 0x041f
-               when 0361 then 0x042f
-               when 0362 then 0x0420
-               when 0363 then 0x0421
-               when 0364 then 0x0422
-               when 0365 then 0x0423
-               when 0366 then 0x0416
-               when 0367 then 0x0412
+               when 0o360 then 0x041f
+               when 0o361 then 0x042f
+               when 0o362 then 0x0420
+               when 0o363 then 0x0421
+               when 0o364 then 0x0422
+               when 0o365 then 0x0423
+               when 0o366 then 0x0416
+               when 0o367 then 0x0412
 
-               when 0370 then 0x042c
-               when 0371 then 0x042b
-               when 0372 then 0x0417
-               when 0373 then 0x0428
-               when 0374 then 0x042d
-               when 0375 then 0x0429
-               when 0376 then 0x0427
-               when 0377 then 0x042a
+               when 0o370 then 0x042c
+               when 0o371 then 0x042b
+               when 0o372 then 0x0417
+               when 0o373 then 0x0428
+               when 0o374 then 0x042d
+               when 0o375 then 0x0429
+               when 0o376 then 0x0427
+               when 0o377 then 0x042a
 
                else 46
                end
@@ -219,19 +219,23 @@ module Tools
   end
 
   def self.rom2bin(filename)
-    input_data = File.open(filename, "rb") { |f| f.read }
-    puts "Wrong ROM data size)".red && return if input_data.size != 8194
+    input_data = File.open(filename, 'rb') { |f| f.read }
+
+    if input_data.bytesize != 8194
+      puts "Wrong ROM data size: expected 8194, got #{input_data.bytesize}".red
+      return
+    end
 
     address_ranges = [ '160000-177777', '140000-157777', '120000-137777', '100000-117777',
                        '060000-077777', '040000-057777', '020000-037777', '000000-017777']
-    range = address_ranges[input_data[-2].ord]
+    range = address_ranges[input_data.getbyte(-2)]
     puts 'ROM address range: '.green + range.yellow
 
     output_data = input_data[0..-3].each_byte.reverse_each.
                     each_slice(2).collect { |s| s.reverse }.flatten.
-                    collect { |b| (255 - b.ord).chr }
+                    map { |b| (255 - b.ord).chr }
 
-    File.open(filename + ".(#{range}).bin", "wb") { |f| f << output_data.join }
+    File.open(filename + ".(#{range}).bin", 'wb') { |f| f.write(output_data.pack('C*') }
   end
 
 end
