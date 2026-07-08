@@ -11,7 +11,7 @@ File name:
 {
   * Bytes 0-12: File name
   * Byte 13:    '&' (38d, 0o46) - marker of 'HELP7' format
-  * Byte 14-15: length of HELP7 block in this file(*).
+  * Bytes 14-15: length of HELP7 block in this file(*).
 }
 
 ```
@@ -53,6 +53,6 @@ File sequence:
   {
     * short marker             (3 short pulses)
     * block sequence
-  }                            - as many times as neeeded, last block can be shorter than others if needed.
+  }                            - as many times as needed, last block can be shorter than others if needed.
 }
 ```

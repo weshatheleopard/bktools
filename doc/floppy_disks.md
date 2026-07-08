@@ -74,7 +74,7 @@ Once all the sectors are loaded, the binary image of the entire disk can be save
 > disk.export("disk_image_name")
 ```
 
-To manually review contents of a sector (if it has been successfuly read, of course):
+To manually review contents of a sector (if it has been successfully read, of course):
 ```
 > sector = track.sectors[8]
 > sector.display

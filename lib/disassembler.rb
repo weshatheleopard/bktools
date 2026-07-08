@@ -6,7 +6,7 @@ module Disassembler
 
   REGISTER_NAMES = %w[ R0 R1 R2 R3 R4 R5 SP PC ]
 
-  # Predefined lavels contain a hash of names assigned to specific addresses.
+  # Predefined labels contain a hash of names assigned to specific addresses.
   # For example: { 0o001000 => :START, 0o177714 => :IOPORT }
   def disassemble_with_labels(predefined_labels = {})
     @predefined_labels = predefined_labels
@@ -38,10 +38,9 @@ module Disassembler
       end
     end
 
-    # TODO: currently start address must be even
     # TODO: add autostart detection
     # TODO: distinguish between local and global labels
-    @current_offset = 0
+    @current_offset = start_address.modulo(2)
 
     @previous_command = ''
 
@@ -52,8 +51,8 @@ module Disassembler
 
       next unless str # Do not bother building the output unless all labels are determined
 
-      code = (0..4).step(2).collect { |offset|
-        (offset < instruction_size ? Tools::octal(word_at(start_offset + offset)) : '      ')
+      code = (0..4).step(2).collect { |local_offset|
+        (local_offset < instruction_size ? Tools::octal(word_at(start_offset + local_offset)) : '      ')
       }.join(' ')
 
       label += ':' unless label.nil? || (label == '')
