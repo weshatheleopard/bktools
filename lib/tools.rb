@@ -235,7 +235,7 @@ module Tools
                     each_slice(2).collect { |s| s.reverse }.flatten.
                     map { |b| (255 - b.ord).chr }
 
-    File.open(filename + ".(#{range}).bin", 'wb') { |f| f.write(output_data.pack('C*') }
+    File.open(filename + ".(#{range}).bin", 'wb') { |f| f.write(output_data.pack('C*')) }
   end
 
 end
