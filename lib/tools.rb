@@ -233,7 +233,7 @@ module Tools
 
     output_data = input_data[0..-3].each_byte.reverse_each.
                     each_slice(2).collect { |s| s.reverse }.flatten.
-                    map { |b| (255 - b.ord).chr }
+                    map { |b| (255 - b.ord) }
 
     File.open(filename + ".(#{range}).bin", 'wb') { |f| f.write(output_data.pack('C*')) }
   end
